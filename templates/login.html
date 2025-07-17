@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purvaj</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-image: url('{{ url_for("static", filename="img/background2.jpg") }}');
+            background-size: cover; /* Ensures background covers entire screen */
+            background-position: center;
+            background-attachment: fixed; /* Prevents scrolling issues on mobile */
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center; /* Center for smaller screens */
+            align-items: center;
+            position: relative;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        .login-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem; /* Relative unit for padding */
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px; /* Increased max-width for flexibility */
+            text-align: center;
+            margin: 1rem; /* Margin for smaller screens */
+        }
+
+        .logo-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1;
+            width: 90%; /* Relative width */
+            max-width: 400px; /* Cap logo size */
+        }
+
+        .logo-container img {
+            max-width: 100%; /* Responsive image */
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .logo-container p {
+            color: #ffffff;
+            font-size: clamp(14px, 4vw, 18px); /* Responsive font size */
+            font-weight: 600;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+            margin: 0;
+        }
+
+        h2 {
+            color: #889E73;
+            margin-bottom: 1.5rem;
+            font-size: clamp(24px, 6vw, 32px); /* Responsive heading */
+        }
+
+        #error-message {
+            color: #ff4d4d;
+            font-size: clamp(12px, 3vw, 14px);
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #error-message.show {
+            opacity: 1;
+        }
+
+        .quote {
+            font-size: clamp(10px, 2.5vw, 12px);
+            color: #ddd;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .btn-primary {
+            background-color: #4A704A;
+            border-color: #4A704A;
+            color: #FFFFFF;
+            font-size: clamp(14px, 4vw, 16px);
+            padding: 0.75rem;
+        }
+
+        .btn-primary:hover {
+            background-color: #3A5A3A;
+            border-color: #3A5A3A;
+            color: #FFFFFF;
+        }
+
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: #4A704A !important;
+            border-color: #4A704A !important;
+            box-shadow: 0 0 0 0.2rem rgba(74, 112, 74, 0.5);
+        }
+
+        /* Media Queries for Larger Screens */
+        @media (min-width: 768px) {
+            body {
+                justify-content: flex-end; /* Align login to right on larger screens */
+            }
+
+            .login-container {
+                margin-right: 4%; /* Right margin for desktop */
+                width: 350px; /* Fixed width for larger screens */
+            }
+
+            .logo-container {
+                max-width: 300px; /* Slightly smaller logo on larger screens */
+            }
+        }
+
+        /* Media Queries for Smaller Screens */
+        @media (max-width: 576px) {
+            .logo-container {
+                top: 20%; /* Move logo higher on small screens */
+                max-width: 250px;
+            }
+
+            .login-container {
+                padding: 1.5rem; /* Reduce padding */
+                max-width: 90%; /* Full width with margin */
+            }
+
+            .form-control {
+                font-size: 14px; /* Smaller inputs */
+                padding: 0.5rem;
+            }
+        }
+
+        /* Ensure logo doesn't overlap login on very small screens */
+        @media (max-height: 600px) {
+            .logo-container {
+                top: 15%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" alt="Purvaj.com Logo">
+        <p>Streamlined QC Process</p>
+    </div>
+    <div class="login-container">
+        <h2>Login</h2>
+        <form id="login-form">
+            <input type="text" id="username" class="form-control mb-3" placeholder="Username" required>
+            <input type="password" id="password" class="form-control mb-3" placeholder="Password" required>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+        <p id="error-message"></p>
+        <p class="quote">"Login for a Streamlined QC Process"</p>
+    </div>
+
+    <script>
+        document.getElementById("login-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            let username = document.getElementById("username").value;
+            let password = document.getElementById("password").value;
+            let errorMessage = document.getElementById("error-message");
+
+            fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: username, password: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    sessionStorage.setItem("sessionID", data.session_id);
+                    window.location.href = data.redirect;
+                } else {
+                    errorMessage.textContent = data.message || "Login failed. Please try again.";
+                    errorMessage.classList.add("show");
+
+                    setTimeout(() => {
+                        errorMessage.classList.remove("show");
+                        setTimeout(() => {
+                            errorMessage.textContent = "";
+                        }, 500);
+                    }, 3000);
+                }
+            })
+            .catch(error => {
+                errorMessage.textContent = "An error occurred. Please try again.";
+                errorMessage.classList.add("show");
+
+                setTimeout(() => {
+                    errorMessage.classList.remove("show");
+                    setTimeout(() => {
+                        errorMessage.textContent = "";
+                    }, 500);
+                }, 3000);
+            });
+        });
+    </script>
+</body>
+</html>

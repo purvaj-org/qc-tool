@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            background-color: #1a1a1a;
+            padding-top: 20px;
+            transition: transform 0.3s ease-in-out;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .sidebar a {
+            color: #fff;
+            padding: 15px 20px;
+            display: block;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #889E73;
+        }
+
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+
+        /* Hamburger Menu */
+        .hamburger {
+            display: none;
+            font-size: 1.5rem;
+            color: #000;
+            padding: 10px;
+            cursor: pointer;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1100;
+        }
+
+        /* Content */
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+            flex: 1;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .content-full {
+            margin-left: 0;
+        }
+
+        .upload-card {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            background: #f8f9fa;
+            margin: 0 auto;
+        }
+
+        /* Progress Bar */
+        .progress {
+            display: none;
+            height: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .progress-bar {
+            width: 0%;
+            transition: width 0.2s ease-in-out;
+        }
+
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            color: black;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+        }
+
+        /* Footer */
+        .custom-footer {
+            margin-left: 250px;
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 10px 20px;
+            font-size: 0.85rem;
+            border-top: 1px solid #333;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .custom-footer a {
+            color: #ccc;
+            text-decoration: none;
+        }
+
+        .custom-footer a:hover {
+            color: #fff;
+        }
+
+        .custom-footer .container {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        /* Logo */
+        .logo-img {
+            width: 80%;
+            max-width: 180px;
+            height: auto;
+            margin: 0 auto;
+            display: block;
+            padding: 10px 0;
+        }
+
+        /* Buttons */
+        .btn-dark-custom {
+            background-color: #1a1a1a;
+            border-color: #1a1a1a;
+            color: white;
+        }
+
+        .btn-dark-custom:hover {
+            background-color: #000000;
+            border-color: #000000;
+            color: white;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 200px;
+            }
+
+            .sidebar-active {
+                transform: translateX(0);
+            }
+
+            .hamburger {
+                display: block;
+            }
+
+            .content {
+                margin-left: 0;
+            }
+
+            .custom-footer {
+                margin-left: 0;
+                text-align: center;
+            }
+
+            .custom-footer .container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .custom-footer .container div {
+                margin-top: 10px;
+            }
+
+            .upload-card {
+                max-width: 100%;
+                padding: 15px;
+            }
+
+            .col-md-6 {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            p, .form-control, .form-select, .btn {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 180px;
+            }
+
+            .sidebar a {
+                font-size: 0.9rem;
+                padding: 10px 15px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            .upload-card {
+                padding: 10px;
+            }
+
+            .progress {
+                height: 8px;
+            }
+
+            .progress-text {
+                font-size: 0.7rem;
+            }
+
+            .custom-footer {
+                font-size: 0.75rem;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hamburger Menu -->
+    <div class="hamburger">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
+             alt="Purvaj.com Logo" 
+             class="logo-img">
+        <a href="/upload" class="active"><i class="fas fa-upload me-2"></i>Upload</a>
+        <a href="/upload_history" id="history-link"><i class="fas fa-history me-2"></i>Upload History</a>
+        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="container min-vh-100 d-flex align-items-center">
+            <div class="row w-100">
+                <div class="col-md-6 d-flex flex-column justify-content-center">
+                    <h2 class="fw-bold mb-3">Upload Batches</h2>
+                    <p class="text-muted">Select your files and upload them.</p>
+                    <p><strong>User ID:</strong> <span id="session-id">Loading...</span></p>
+                </div>
+                <div class="col-md-6 d-flex justify-content-center">
+                    <div class="upload-card">
+                        <h2 class="text-center mb-4">Upload</h2>
+                        <form id="upload-form">
+                            <select class="form-select mb-3" id="location" required>
+                                <option value="" disabled selected>Select Location</option>
+                            </select>
+                            <select class="form-select mb-3" id="panda-name" required>
+                                <option value="" disabled selected>Select Panda Name</option>
+                            </select>
+                            <input type="text" class="form-control mb-3" id="bahi-name" placeholder="Enter Bahi Name" required>
+                            <select class="form-select mb-3" id="record-type" required>
+                                <option value="" disabled selected>Select Record Type</option>
+                                <option value="Cover">Cover</option>
+                                <option value="Suchi">Suchi</option>
+                                <option value="Record">Record</option>
+                            </select>
+                            <select class="form-select mb-3" id="upload-type" required>
+                                <option value="" disabled selected>Select Upload Type</option>
+                                <option value="complete">Complete</option>
+                                <option value="partial">Partial</option>
+                                <option value="reupload">Reupload</option>
+                            </select>
+                            <input type="file" class="form-control mb-3" id="folder-input" webkitdirectory directory multiple required>
+                            <div class="progress mt-3">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"></div>
+                                <div class="progress-text">0%</div>
+                            </div>
+                            <button type="submit" class="btn btn-dark-custom w-100 mt-3">Upload</button>
+                        </form>
+                        <p id="upload-message" class="mt-3 text-center"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="custom-footer">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span>© 2025 Purvaj</span>
+            <div>
+                <a href="/about" class="me-3">About</a>
+                <a href="/contact" class="me-3">Contact</a>
+                <a href="/privacy">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Sidebar Toggle for Mobile
+        document.addEventListener("DOMContentLoaded", function () {
+            const hamburger = document.querySelector(".hamburger");
+            const sidebar = document.querySelector(".sidebar");
+            const content = document.querySelector(".content");
+            const footer = document.querySelector(".custom-footer");
+
+            hamburger.addEventListener("click", function () {
+                sidebar.classList.toggle("sidebar-active");
+            });
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener("click", function (e) {
+                if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !hamburger.contains(e.target)) {
+                    sidebar.classList.remove("sidebar-active");
+                }
+            });
+
+            // Adjust content and footer margin on resize
+            window.addEventListener("resize", function () {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove("sidebar-active");
+                    content.classList.remove("content-full");
+                    footer.classList.remove("content-full");
+                }
+            });
+        });
+
+        // Existing JavaScript for session and form handling
+        document.addEventListener("DOMContentLoaded", function () {
+            let sessionID = sessionStorage.getItem("sessionID") || "Not Set";
+            document.getElementById("session-id").textContent = sessionID;
+
+            if (sessionID !== "Not Set") {
+                document.getElementById("history-link").href = "/upload_history?session_id=" + sessionID;
+
+                fetch(`/get_vendor_data?unique_userid=${sessionID}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let locationDropdown = document.getElementById("location");
+                        let pandaDropdown = document.getElementById("panda-name");
+
+                        locationDropdown.innerHTML = '<option value="" disabled selected>Select Location</option>';
+                        pandaDropdown.innerHTML = '<option value="" disabled selected>Select Panda Name</option>';
+
+                        data.locations.forEach(location => {
+                            let option = document.createElement("option");
+                            option.value = location;
+                            option.textContent = location;
+                            locationDropdown.appendChild(option);
+                        });
+
+                        data.pandas.forEach(panda => {
+                            let option = document.createElement("option");
+                            option.value = panda;
+                            option.textContent = panda;
+                            pandaDropdown.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Error fetching vendor data:", error));
+            }
+
+            document.getElementById("bahi-name").addEventListener("input", function () {
+                let uploadMessage = document.getElementById("upload-message");
+                if (this.value.includes("_")) {
+                    uploadMessage.textContent = "Bahi Name cannot contain underscores (_).";
+                } else {
+                    uploadMessage.textContent = "";
+                }
+            });
+        });
+
+        document.getElementById("upload-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            let bahiName = document.getElementById("bahi-name").value;
+            let uploadMessage = document.getElementById("upload-message");
+
+            if (bahiName.includes("_")) {
+                uploadMessage.textContent = "Bahi Name cannot contain underscores (_).";
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("location", document.getElementById("location").value);
+            formData.append("panda-name", document.getElementById("panda-name").value);
+            formData.append("bahi-name", bahiName);
+            formData.append("upload-type", document.getElementById("upload-type").value);
+            formData.append("record-type", document.getElementById("record-type").value);
+
+            let files = document.getElementById("folder-input").files;
+            if (files.length === 0) {
+                uploadMessage.textContent = "Please select files to upload.";
+                return;
+            }
+
+            for (let i = 0; i < files.length; i++) {
+                formData.append("files", files[i]);
+            }
+
+            let progressBar = document.querySelector(".progress");
+            let progressBarFill = document.querySelector(".progress-bar");
+            let progressText = document.querySelector(".progress-text");
+            uploadMessage.textContent = "";
+
+            progressBar.style.display = "block";
+            progressBarFill.style.width = "0%";
+            progressText.textContent = "0%";
+            uploadMessage.textContent = "Uploading to server...";
+
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "/upload_images", true);
+
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    let percentComplete = Math.round((event.loaded / event.total) * 50);
+                    progressBarFill.style.width = percentComplete + "%";
+                    progressText.textContent = percentComplete + "%";
+                }
+            };
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    uploadMessage.textContent = "Processing on server...";
+                    pollBackendProgress();
+                } else {
+                    progressBar.style.display = "none";
+                    uploadMessage.textContent = "Upload failed: " + xhr.responseText;
+                }
+            };
+
+            xhr.onerror = function () {
+                progressBar.style.display = "none";
+                uploadMessage.textContent = "Upload failed due to a network error.";
+            };
+
+            xhr.send(formData);
+
+            function pollBackendProgress() {
+                let interval = setInterval(() => {
+                    fetch("/upload_progress")
+                        .then(response => response.json())
+                        .then(data => {
+                            let backendProgress = Math.min(data.progress, 100);
+                            let totalProgress = 50 + (backendProgress * 0.5);
+                            progressBarFill.style.width = totalProgress + "%";
+                            progressText.textContent = Math.round(totalProgress) + "%";
+
+                            if (backendProgress === 100) {
+                                clearInterval(interval);
+                                progressBar.style.display = "none";
+                                uploadMessage.textContent = "Upload successful!";
+                            }
+                        })
+                        .catch(error => {
+                            clearInterval(interval);
+                            progressBar.style.display = "none";
+                            uploadMessage.textContent = "Error checking progress: " + error;
+                        });
+                }, 500);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/check_session', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Session check failed:', error);
+                window.location.href = '/login';
+            });
+        });
+    </script>
+</body>
+</html>

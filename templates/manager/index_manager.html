@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            background-color: #1a1a1a;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: #fff;
+            padding: 15px 20px;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #889E73;
+        }
+        .logo-img {
+            max-width: 120px;
+            margin: 0 auto 20px;
+            display: block;
+        }
+        .content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .search-form .form-label { font-weight: 600; }
+        #results-table { margin-top: 2rem; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" alt="Purvaj.com Logo" class="logo-img">
+        <a href="{{ url_for('manager.manager_upload_history') }}"><i class="fas fa-history me-2"></i>Upload History</a>
+        <a href="{{ url_for('manager.manager_dashboard') }}" class="active"><i class="fas fa-tachometer-alt me-2"></i>QC History</a>
+        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <div class="content">
+        <div class="container-fluid">
+            <h1 class="mb-4">QC History</h1>
+            
+            <!-- Search Form -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Search Vendor Data</h5>
+                    <form id="search-form">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="vendor-select" class="form-label">Vendor</label>
+                                <select id="vendor-select" class="form-select"><option value="">All Vendors</option></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="location-select" class="form-label">Location</label>
+                                <select id="location-select" class="form-select"><option value="">All Locations</option></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="pandas-name-select" class="form-label">Pandas Name</label>
+                                <select id="pandas-name-select" class="form-select"><option value="">All Pandas</option></select>
+                            </div>
+                        </div>
+
+                        <!-- Loading spinner for filters -->
+                        <div id="filter-loading" class="d-none text-center mb-2">
+                            <div class="spinner-border text-secondary" role="status" style="width:1.5rem;height:1.5rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label for="batch-id-input" class="form-label">Batch ID</label>
+                                <input type="text" id="batch-id-input" class="form-control" placeholder="Enter Batch ID">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="start-date" class="form-label">Start Date</label>
+                                <input type="date" id="start-date" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="end-date" class="form-label">End Date</label>
+                                <input type="date" id="end-date" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100">Search</button>
+                                <button type="button" id="clear-btn" class="btn btn-secondary w-100 mt-2">Clear</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div id="results-count" class="text-muted"></div>
+                <div id="pagination-controls"></div>
+                <!-- Loading spinner for search results -->
+                <div id="search-loading" class="d-none my-3 d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div id="results-table" class="table-responsive mt-2">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Upload Date</th>
+                            <th>Batch ID</th>
+                            <th>Location</th>
+                            <th>Pandas Name</th>
+                            <th>Bahi Name</th>
+                            <th>Image Count</th>
+                            <th>Approved</th>
+                            <th>Rejected</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
+                <div id="no-results-msg" class="alert alert-info text-center" role="alert">
+                    Please use the filters above to search for QC history.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterLoading = document.getElementById('filter-loading');
+            const setLoading = (state) => {
+                if (state) {
+                    filterLoading.classList.remove('d-none');
+                    vendorSelect.disabled = locationSelect.disabled = pandasNameSelect.disabled = true;
+                } else {
+                    filterLoading.classList.add('d-none');
+                    vendorSelect.disabled = locationSelect.disabled = pandasNameSelect.disabled = false;
+                }
+            };
+            const vendorSelect = document.getElementById('vendor-select');
+            const locationSelect = document.getElementById('location-select');
+            const pandasNameSelect = document.getElementById('pandas-name-select');
+            const searchForm = document.getElementById('search-form');
+            const resultsBody = document.getElementById('results-body');
+            const noResultsMsg = document.getElementById('no-results-msg');
+            const clearBtn = document.getElementById('clear-btn');
+            const paginationControls = document.getElementById('pagination-controls');
+            const resultsCount = document.getElementById('results-count');
+            const searchLoading = document.getElementById('search-loading');
+
+            // Fetch locations when vendor changes
+            function updateLocationsForVendor(vendorId) {
+                // Reset dropdowns
+                locationSelect.innerHTML = '<option value="">All Locations</option>';
+                pandasNameSelect.innerHTML = '<option value="">All Pandas</option>';
+                if (!vendorId) return;
+                setLoading(true);
+    fetch(`/api/manager/vendor/${vendorId}/locations`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            d.locations.forEach(loc => {
+                                locationSelect.add(new Option(loc, loc));
+                            });
+                        }
+                    })
+                    .catch(err => console.error('Error fetching vendor locations:', err))
+        .finally(()=> setLoading(false));
+            }
+
+            // Fetch pandas names when vendor or location changes
+            function updatePandasForVendorLocation(vendorId, location) {
+                pandasNameSelect.innerHTML = '<option value="">All Pandas</option>';
+                if (!vendorId || !location) return;
+                setLoading(true);
+    fetch(`/api/manager/vendor/${vendorId}/location/${encodeURIComponent(location)}/pandas`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.success) {
+                            d.pandas_names.forEach(pn => pandasNameSelect.add(new Option(pn, pn)));
+                        }
+                    })
+                    .catch(err => console.error('Error fetching pandas names:', err))
+        .finally(()=> setLoading(false));
+            }
+
+            vendorSelect.addEventListener('change', () => {
+                updateLocationsForVendor(vendorSelect.value);
+            });
+            locationSelect.addEventListener('change', () => {
+                updatePandasForVendorLocation(vendorSelect.value, locationSelect.value);
+            });
+            let currentPage = 1;
+
+            // Fetch and populate filters
+            setLoading(true);
+            fetch('/api/manager/filters')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Populate vendors
+                        data.vendors.forEach(vendor => {
+                            const option = new Option(vendor.name, vendor.unique_userid);
+                            vendorSelect.add(option);
+                        });
+                        // Populate locations
+                        data.locations.forEach(location => {
+                            locationSelect.add(new Option(location, location));
+                        });
+                        data.pandas_names.forEach(name => {
+                            pandasNameSelect.add(new Option(name, name));
+                        });
+                    } else {
+                        console.error('Failed to load filters:', data.error);
+                    }
+                })
+                .catch(error => console.error('Error fetching filters:', error))
+                .finally(()=> setLoading(false));
+
+            // Handle form submission
+            function performSearch(page = 1) {
+                const payload = {
+                    vendor_id: vendorSelect.value,
+                    location: locationSelect.value,
+                    pandas_name: pandasNameSelect.value,
+                    batch_id: document.getElementById('batch-id-input').value,
+                    start_date: document.getElementById('start-date').value,
+                    end_date: document.getElementById('end-date').value,
+                    page: page
+                };
+
+                searchLoading.classList.remove('d-none');
+                fetch('/api/manager/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    resultsBody.innerHTML = ''; // Clear previous results
+                    noResultsMsg.classList.add('d-none'); // Hide by default
+
+                    if (data.success && data.data.length > 0) {
+                        data.data.forEach(row => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${row.vendor_name}</td>
+                                <td>${new Date(row.upload_date).toLocaleDateString()}</td>
+                                <td>${row.batch_id}</td>
+                                <td>${row.location}</td>
+                                <td>${row.pandas_name}</td>
+                                <td>${row.bahi_name}</td>
+                                <td>${row.image_count}</td>
+                                <td>${row.approved_count}</td>
+                                <td>${row.rejected_count}</td>
+                            `;
+                            resultsBody.appendChild(tr);
+                        });
+                    } else {
+                        // Display error from backend or 'No results' message
+                        noResultsMsg.innerHTML = data.error ? `Error: ${data.error}` : 'No results found for the selected criteria.';
+                        noResultsMsg.className = 'alert alert-warning text-center';
+                        noResultsMsg.classList.remove('d-none');
+                    }
+                    renderPagination(data.total_pages, data.current_page, data.total_records);
+                })
+                .catch(error => {
+                    console.error('Error during search:', error);
+                    resultsBody.innerHTML = '';
+                    noResultsMsg.innerHTML = 'A network error occurred. Please check the console for details.';
+                    noResultsMsg.className = 'alert alert-danger text-center';
+                    noResultsMsg.classList.remove('d-none');
+                })
+                .finally(() => {
+                    searchLoading.classList.add('d-none');
+                });
+            }
+
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                currentPage = 1;
+                performSearch(currentPage);
+            });
+
+            // Handle clear button
+            clearBtn.addEventListener('click', function() {
+                searchForm.reset();
+                resultsBody.innerHTML = '';
+                noResultsMsg.innerHTML = 'Please use the filters above to search for QC history.';
+                noResultsMsg.className = 'alert alert-info text-center';
+                noResultsMsg.classList.remove('d-none');
+                paginationControls.innerHTML = '';
+                resultsCount.innerHTML = '';
+            });
+        function renderPagination(totalPages, currentPage, totalRecords) {
+            paginationControls.innerHTML = '';
+            resultsCount.innerHTML = '';
+            if (totalRecords === 0) return;
+
+            const perPage = 12;
+            const startRecord = (currentPage - 1) * perPage + 1;
+            const endRecord = Math.min(startRecord + perPage - 1, totalRecords);
+            resultsCount.innerText = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+
+            if (totalPages <= 1) return;
+
+            const ul = document.createElement('ul');
+            ul.className = 'pagination';
+
+            const createPageItem = (page, text, disabled = false, active = false) => {
+                const li = document.createElement('li');
+                li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+                const link = document.createElement('a');
+                link.className = 'page-link';
+                link.href = '#';
+                link.innerHTML = text;
+                if (!disabled) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        performSearch(page);
+                    });
+                }
+                li.appendChild(link);
+                return li;
+            };
+
+            ul.appendChild(createPageItem(currentPage - 1, '«', currentPage === 1));
+
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+
+            if (currentPage - 1 <= 2) {
+                endPage = Math.min(totalPages, 5);
+            }
+            if (totalPages - currentPage <= 2) {
+                startPage = Math.max(1, totalPages - 4);
+            }
+
+            if (startPage > 1) {
+                ul.appendChild(createPageItem(1, '1'));
+                if (startPage > 2) {
+                    ul.appendChild(createPageItem(0, '...', true));
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                ul.appendChild(createPageItem(i, i, false, i === currentPage));
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    ul.appendChild(createPageItem(0, '...', true));
+                }
+                ul.appendChild(createPageItem(totalPages, totalPages));
+            }
+
+            ul.appendChild(createPageItem(currentPage + 1, '»', currentPage === totalPages));
+
+            paginationControls.appendChild(ul);
+        }
+        });
+    </script>
+</body>
+</html>

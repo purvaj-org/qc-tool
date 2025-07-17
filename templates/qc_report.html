@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC Report</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <style>
+        /* Base Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            background-color: #1a1a1a;
+            padding-top: 1rem;
+            transition: transform 0.3s ease;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .sidebar a {
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            display: block;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .sidebar a:hover, 
+        .sidebar a.active {
+            background-color: #889E73;
+        }
+
+        /* Main Content Area */
+        .content {
+            margin-left: 250px;
+            padding: 1.5rem;
+            flex: 1;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            border: 1px solid #889E73;
+        }
+
+        th, td {
+            padding: 0.625rem;
+            border: 1px solid #000;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #000;
+            color: white;
+            cursor: pointer;
+        }
+
+        th.sortable:hover {
+            background-color: #333;
+        }
+
+        /* Sort Icons */
+        .sort-icon::after {
+            content: '\f0dc';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            margin-left: 0.5rem;
+            display: inline-block;
+        }
+
+        .sort-asc::after {
+            content: '\f0de';
+        }
+
+        .sort-desc::after {
+            content: '\f0dd';
+        }
+
+        /* Status Indicators */
+        .status-accepted {
+            color: green;
+            font-weight: bold;
+        }
+
+        .status-rejected {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* Filter Controls */
+        .filter-group {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            margin-right: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .filter-group select, 
+        .filter-group input {
+            padding: 0.5rem;
+            border: 1px solid #889E73;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background-color: #fff;
+            color: #000;
+        }
+
+        .filter-group select {
+            width: 200px;
+        }
+
+        .filter-group .date-range-input {
+            width: 250px;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 1rem;
+            font-size: 1rem;
+            color: #889E73;
+        }
+
+        /* Footer */
+        .custom-footer {
+            margin-left: 250px;
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 0.5rem 1.5rem;
+            font-size: 0.8rem;
+            border-top: 1px solid #333;
+            transition: margin-left 0.3s ease;
+        }
+
+        .custom-footer a {
+            color: #ccc;
+            text-decoration: none;
+        }
+
+        .custom-footer a:hover {
+            color: #fff;
+        }
+
+        /* Logo */
+        .logo-img {
+            width: 80%;
+            max-width: 180px;
+            height: auto;
+            margin: 0 auto;
+            display: block;
+            padding: 0.625rem 0;
+        }
+
+        /* Image Container & Preview */
+        .image-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            overflow: hidden;
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 6px;
+        }
+
+        /* Mobile Menu Toggle */
+        .hamburger {
+            display: none;
+            font-size: 1.5rem;
+            color: #fff;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+
+        /* Statistics Boxes */
+        .stats-box {
+            background: linear-gradient(135deg, #7b965c, #7b965c);
+            border: none;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: #fff;
+            transition: transform 0.2s ease;
+        }
+
+        .stats-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-box h4 {
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #fff;
+        }
+
+        .stats-box .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .stats-box .stat-item {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+            transition: background-color 0.2s ease;
+        }
+
+        .stats-box .stat-item:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .stats-box .stat-item strong {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            color: #f5f5f5;
+        }
+
+        .stats-box .stat-item span {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Pagination Controls */
+        .pagination {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #889E73;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #000;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .pagination button:disabled {
+            background-color: #e0e0e0;
+            border-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background-color: #889E73;
+            color: #fff;
+        }
+
+        /* Download Buttons */
+        .download-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Image Links */
+        .image-link {
+            color: #007bff;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .image-link:hover {
+            color: #0056b3;
+        }
+
+        /* Canvas for Image Manipulation */
+        #imageCanvas {
+            display: block;
+            cursor: grab;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background-color: transparent;
+        }
+
+        #imageCanvas.dragging {
+            cursor: grabbing;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Modal Styling */
+        .modal-dialog {
+            max-width: 80vw;
+            margin: 1.75rem auto;
+        }
+
+        .modal-dialog.modal-xl {
+            max-width: 90vw;
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(to right, #ffffff, #f8f9fa);
+            border-bottom: 1px solid #e9ecef;
+            padding: 1rem 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #212529;
+        }
+
+        .modal-title i {
+            color: #889E73;
+        }
+
+        .modal-header .btn-close {
+            filter: invert(1);
+            opacity: 0.8;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .modal-header .btn-close:hover {
+            transform: rotate(90deg);
+            opacity: 1;
+        }
+
+        .modal-body {
+            position: relative;
+            text-align: center;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 0;
+            overflow: hidden;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .modal-footer .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-footer .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 6px;
+            background-color: #889E73;
+            color: #ffffff;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-footer .btn:hover {
+            background-color: #3a5a3d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 112, 77, 0.3);
+        }
+
+        .modal-footer .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(74, 112, 77, 0.2);
+        }
+
+        .modal-footer .btn i {
+            margin-right: 0.5rem;
+        }
+
+        .modal-footer .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .modal-footer .btn-secondary:hover {
+            background-color: #5c636a;
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+
+        .modal-footer .btn:disabled {
+            background-color: #ced4da;
+            color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Status Button Styles */
+        .btn-accepted {
+            background-color: #28a745;
+        }
+
+        .btn-accepted:hover {
+            background-color: #218838;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-rejected {
+            background-color: #dc3545;
+        }
+
+        .btn-rejected:hover {
+            background-color: #c82333;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 70vw;
+                max-width: 250px;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .content, .custom-footer {
+                margin-left: 0;
+            }
+
+            .hamburger {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1100;
+            }
+
+            th, td {
+                font-size: 0.8rem;
+                padding: 0.5rem;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .filter-group select, .filter-group input {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .modal-dialog.modal-xl {
+                max-width: 100%;
+                margin: 0.5rem;
+            }
+            
+            .modal-footer {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .modal-footer .btn-group {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .modal-footer .btn-secondary {
+                width: 100%;
+            }
+            
+            .image-container {
+                height: 60vh !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .content {
+                padding: 1rem;
+            }
+
+            th, td {
+                font-size: 0.7rem;
+                padding: 0.4rem;
+            }
+
+            .custom-footer {
+                font-size: 0.7rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .logo-img {
+                max-width: 120px;
+            }
+
+            .filter-group select, .filter-group input {
+                font-size: 0.8rem;
+                padding: 0.4rem;
+            }
+
+            .stats-box {
+                padding: 1rem;
+            }
+
+            .stats-box h4 {
+                font-size: 1.1rem;
+            }
+
+            .stats-box .stat-item strong {
+                font-size: 0.8rem;
+            }
+
+            .stats-box .stat-item span {
+                font-size: 1rem;
+            }
+
+            .pagination {
+                flex-direction: column;
+                align-items: flex-end;
+            }
+
+            .pagination button {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
+
+            .download-buttons {
+                justify-content: flex-end;
+                width: 100%;
+            }
+        }
+
+        /* Date Picker Styles */
+        .date-selection-container {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 11px;
+        }
+
+        .date-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .date-input-group {
+            min-width: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .date-input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+        }
+
+        .date-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .apply-btn {
+            padding: 8px 16px;
+            background-color: #000000;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .apply-btn:hover {
+            background-color: #889E73;
+        }
+
+        .custom-date-controls {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .custom-date-controls.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .date-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .date-input-group {
+                width: 100%;
+            }
+
+            .date-input-group label {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="hamburger"><i class="fas fa-bars"></i></button>
+
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
+             alt="Purvaj.com Logo" 
+             class="logo-img">
+        <a href="/ready_to_allocate"><i class="fas fa-tasks me-2"></i>Ready to Allocate</a>
+        <a href="/allocation_history"><i class="fas fa-history me-2"></i>Allocation History</a>
+        <a href="/qc_user"><i class="fas fa-users me-2"></i>QC Users</a>
+        <a href="/upload_user"><i class="fas fa-user-plus me-2"></i>Upload Users</a>
+        <a href="/qc_report" class="active"><i class="fas fa-clipboard-check me-2"></i>QC Report</a>
+        <a href="/logout" class="mt-auto"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <div class="content">
+        <div class="container mt-4">
+            <h2 class="fw-bold">QC Report</h2>
+            <div class="filter-group">
+                <div>
+                    <label for="user-select">Select User:</label>
+                    <select id="user-select">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+                <div id="dateSelectorContainer" class="date-selection-container">
+                    <div class="date-controls">
+                        <div class="date-input-group">
+                            <label for="date-range-select">Date Range:</label>
+                            <select id="date-range-select" class="form-select">
+                                <option value="today" selected>Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="last-7-days">Last 7 Days</option>
+                                <option value="last-week">Last Week</option>
+                                <option value="this-month">This Month</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="custom-date-controls" id="custom-date-controls">
+                        <div class="date-controls">
+                            <div class="date-input-group">
+                                <label for="date-range-picker">Select Custom Range:</label>
+                                <input type="text" id="date-range-picker" class="date-input date-range-input" placeholder="Select date range" readonly>
+                            </div>
+                            <div>
+                                <button id="apply-date-filter" class="apply-btn">Apply Filter</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label for="batch-select">Select Batch ID:</label>
+                    <select id="batch-select">
+                        <option value="">All Batches</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="status-select">Select Status:</label>
+                    <select id="status-select">
+                        <option value="">All Statuses</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+            <div class="stats-box" id="stats-box" style="display: none;">
+                <h4>Summary Statistics</h4>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <strong>Accepted Images</strong>
+                        <span id="accepted-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <strong>Rejected Images</strong>
+                        <span id="rejected-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <strong>Total Images</strong>
+                        <span id="image-count">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="pagination">
+                <div class="download-buttons">
+                    <button id="download-excel">Download Excel</button>
+                </div>
+                <div>
+                    <label for="row-limit" style="margin-right: 8px;">Rows per Page:</label>
+                    <select id="row-limit" style="padding: 0.5rem 1rem; border: 1px solid #889E73; border-radius: 4px; background-color: #fff; color: #000; cursor: pointer; font-size: 0.9rem;">
+                        <option value="7">7</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="70">70</option>
+                        <option value="100">100</option>
+                        <option value="300">300</option>
+                        <option value="full">Full</option>
+                    </select>
+                </div>
+                <div>
+                    <button id="prev-page" disabled>Previous</button>
+                    <button id="next-page">Next</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="qc-table">
+                    <thead>
+                        <tr>
+                            <th>Unique UserID</th>
+                            <th>Name</th>
+                            <th class="sortable" data-sort="batch_id">Batch ID<span class="sort-icon"></span></th>
+                            <th>Image ID</th>
+                            <th class="sortable" data-sort="status">Status<span class="sort-icon"></span></th>
+                            <th class="sortable" data-sort="remarks">Remark<span class="sort-icon"></span></th>
+                            <th>Orientation Error</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qc-report-table">
+                        <tr><td colspan="7" class="loading">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal fade image-preview-modal" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header d-flex align-items-center">
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="imageModalLabel">
+                        <i class="fas fa-image"></i> Image Preview
+                    </h5>
+                    <button type="button" class="btn-close close-button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="image-container position-relative w-100" style="height: 70vh; background-color: #f8f9fa;">
+                        <canvas id="imageCanvas" class="position-absolute top-50 start-50 translate-middle"></canvas>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between align-items-center">
+                    <div class="btn-group d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-accepted accept" id="acceptBtn">
+                            <i class="fas fa-check me-1"></i> Accept
+                        </button>
+                        <button type="button" class="btn btn-rejected reject" id="rejectBtn" style="background-color: #9b0302; color: white;">
+                            <i class="fas fa-times me-1"></i> Reject
+                        </button>
+                        <button type="button" class="btn" id="zoomIn" style="padding: 0.5rem 1rem; border: 1px solid #889E73; border-radius: 4px; background-color: #fff; color: #000; cursor: pointer; font-size: 0.9rem;">
+                            <i class="fas fa-search-plus me-1"></i> Zoom In
+                        </button>
+                        <button type="button" class="btn" id="zoomOut" style="padding: 0.5rem 1rem; border: 1px solid #889E73; border-radius: 4px; background-color: #fff; color: #000; cursor: pointer; font-size: 0.9rem;">
+                            <i class="fas fa-search-minus me-1"></i> Zoom Out
+                        </button>
+                        <button type="button" class="btn" id="rotate" style="padding: 0.5rem 1rem; border: 1px solid #889E73; border-radius: 4px; background-color: #fff; color: #000; cursor: pointer; font-size: 0.9rem;">
+                            <i class="fas fa-sync-alt me-1"></i> Rotate
+                        </button>
+                        <button type="button" class="btn" id="fullscreen" style="padding: 0.5rem 1rem; border: 1px solid #889E73; border-radius: 4px; background-color: #fff; color: #000; cursor: pointer; font-size: 0.9rem;">
+                            <i class="fas fa-expand me-1"></i> Fullscreen
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-secondary close-button" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="custom-footer">
+        <div class="container d-flex justify-content-between align-items-center flex-wrap">
+            <span>© 2025 Purvaj</span>
+            <div>
+                <a href="/about" class="text-decoration-none me-3">About</a>
+                <a href="/contact" class="text-decoration-none me-3">Contact</a>
+                <a href="/privacy" class="text-decoration-none">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('.hamburger').click(function () {
+                $('.sidebar').toggleClass('active');
+            });
+
+            $(document).click(function (e) {
+                if ($(window).width() <= 992) {
+                    if (!$(e.target).closest('.sidebar').length && !$(e.target).closest('.hamburger').length) {
+                        $('.sidebar').removeClass('active');
+                    }
+                }
+            });
+
+            let availableDates = [];
+            let sortColumn = null;
+            let sortDirection = 'asc';
+            let allData = [];
+            let currentPage = 1;
+            let currentBatchId = null;
+            let currentImageId = null;
+            let flatpickrInstance;
+
+            function showModal(title, message, isError = false) {
+                const modalOverlay = document.createElement('div');
+                modalOverlay.className = 'modal-overlay';
+                modalOverlay.style.position = 'fixed';
+                modalOverlay.style.top = '0';
+                modalOverlay.style.left = '0';
+                modalOverlay.style.width = '100%';
+                modalOverlay.style.height = '100%';
+                modalOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                modalOverlay.style.display = 'flex';
+                modalOverlay.style.justifyContent = 'center';
+                modalOverlay.style.alignItems = 'center';
+                modalOverlay.style.zIndex = '1000';
+
+                const modalContent = document.createElement('div');
+                modalContent.className = 'modal-content';
+                modalContent.style.backgroundColor = '#fff';
+                modalContent.style.padding = '20px';
+                modalContent.style.borderRadius = '5px';
+                modalContent.style.maxWidth = '500px';
+                modalContent.style.width = '90%';
+                modalContent.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+                modalContent.style.position = 'relative';
+
+                const iconDiv = document.createElement('div');
+                iconDiv.style.textAlign = 'center';
+                iconDiv.style.marginBottom = '15px';
+
+                const icon = document.createElement('div');
+                icon.style.width = '60px';
+                icon.style.height = '60px';
+                icon.style.borderRadius = '50%';
+                icon.style.display = 'inline-flex';
+                icon.style.justifyContent = 'center';
+                icon.style.alignItems = 'center';
+
+                if (isError) {
+                    icon.style.backgroundColor = '#ffebee';
+                    icon.style.color = '#f44336';
+                    icon.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+                } else {
+                    icon.style.backgroundColor = '#e8f5e9';
+                    icon.style.color = '#4caf50';
+                    icon.innerHTML = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+                }
+
+                iconDiv.appendChild(icon);
+                modalContent.appendChild(iconDiv);
+
+                const titleElement = document.createElement('h2');
+                titleElement.textContent = title;
+                titleElement.style.textAlign = 'center';
+                titleElement.style.margin = '0 0 15px 0';
+                titleElement.style.color = isError ? '#f44336' : '#4caf50';
+                modalContent.appendChild(titleElement);
+
+                const messageElement = document.createElement('p');
+                messageElement.textContent = message;
+                messageElement.style.textAlign = 'center';
+                messageElement.style.marginBottom = '20px';
+                modalContent.appendChild(messageElement);
+
+                const okButton = document.createElement('button');
+                okButton.textContent = 'OK';
+                okButton.style.padding = '8px 30px';
+                okButton.style.backgroundColor = isError ? '#f44336' : '#4caf50';
+                okButton.style.color = 'white';
+                okButton.style.border = 'none';
+                okButton.style.borderRadius = '4px';
+                okButton.style.cursor = 'pointer';
+                okButton.style.display = 'block';
+                okButton.style.margin = '0 auto';
+                okButton.onclick = function() {
+                    document.body.removeChild(modalOverlay);
+                };
+                modalContent.appendChild(okButton);
+
+                modalOverlay.appendChild(modalContent);
+                document.body.appendChild(modalOverlay);
+            }
+
+            function fetchFilterData() {
+                $.getJSON("/get_filter_data", function (response) {
+                    console.log("Filter data response:", response);
+                    if (response.error) {
+                        showModal('Error', response.error, true);
+                        $('#qc-report-table').html(
+                            '<tr><td colspan="7" class="text-center">Failed to load filters: ' + response.error + '</td></tr>'
+                        );
+                        return;
+                    }
+
+                    const userSelect = $('#user-select');
+                    userSelect.empty();
+                    userSelect.append('<option value="">All Users</option>');
+                    if (response.users && response.users.length > 0) {
+                        response.users.forEach(user => {
+                            userSelect.append(
+                                `<option value="${user.unique_userid}">${user.name} (${user.unique_userid})</option>`
+                            );
+                        });
+                    } else {
+                        console.warn("No users found in response");
+                        userSelect.append('<option value="">No users available</option>');
+                    }
+
+                    availableDates = response.dates || [];
+                    console.log("Available dates:", availableDates);
+
+                    flatpickrInstance = flatpickr("#date-range-picker", {
+                        mode: "range",
+                        dateFormat: "Y-m-d",
+                        minDate: availableDates.length > 0 ? availableDates[availableDates.length - 1] : null,
+                        maxDate: availableDates.length > 0 ? availableDates[0] : null,
+                        disableMobile: true,
+                    });
+
+                    if (availableDates.length > 0) {
+                        const today = formatDate(new Date());
+                        if (availableDates.includes(today)) {
+                            flatpickrInstance.setDate([today, today], true);
+                        }
+                    }
+
+                    fetchQCReport();
+                }).fail(function (jqXHR, textStatus, errorThrown) {
+                    console.error("Filter data fetch failed:", textStatus, errorThrown, jqXHR.responseText);
+                    const errorMsg = jqXHR.responseJSON?.error || 'Unknown error';
+                    showModal('Error', `Failed to fetch filter data: ${errorMsg}`, true);
+                    $('#qc-report-table').html(
+                        '<tr><td colspan="7" class="text-center">Failed to load filters: ' + errorMsg + '</td></tr>'
+                    );
+                });
+            }
+
+            function validateDateInputs(fromDate, toDate) {
+                if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
+                    showModal('Warning', '"From Date" must be before or equal to "To Date".', true);
+                    flatpickrInstance.setDate([availableDates[0], availableDates[0]], true);
+                    return false;
+                }
+                return true;
+            }
+
+            function calculateStats(data) {
+                const acceptedCount = data.filter(row => row.status && row.status.toLowerCase() === 'accepted').length;
+                const rejectedCount = data.filter(row => row.status && row.status.toLowerCase() === 'rejected').length;
+                const imageCount = data.length;
+
+                $('#accepted-count').text(acceptedCount);
+                $('#rejected-count').text(rejectedCount);
+                $('#image-count').text(imageCount);
+
+                $('#stats-box').show();
+            }
+
+            function sortData(data, column, direction) {
+                return data.sort((a, b) => {
+                    let valA = a[column] || '';
+                    let valB = b[column] || '';
+                    if (column === 'status' || column === 'remarks') {
+                        valA = valA.toLowerCase();
+                        valB = valB.toLowerCase();
+                    }
+                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            function renderTable(data) {
+                let tableBody = "";
+                if (data.length === 0) {
+                    tableBody = `<tr><td colspan="7" class="text-center">No record found</td></tr>`;
+                } else {
+                    data.forEach(row => {
+                        const statusClass = row.status && row.status.toLowerCase() === 'accepted' ? 'status-accepted' :
+                                         row.status && row.status.toLowerCase() === 'rejected' ? 'status-rejected' : '';
+                        tableBody += `
+                            <tr>
+                                <td>${row.unique_userid || 'N/A'}</td>
+                                <td>${row.qc_reviewer_name || 'N/A'}</td>
+                                <td>${row.batch_id || 'N/A'}</td>
+                                <td><a href="#" class="image-link" data-batch-id="${row.batch_id}" data-image-id="${row.image_id}">${row.image_id || 'N/A'}</a></td>
+                                <td class="${statusClass}">${row.status || 'N/A'}</td>
+                                <td>${row.remarks || 'N/A'}</td>
+                                <td>${row.orientation_error || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                $("#qc-report-table").html(tableBody);
+
+                $('.image-link').click(function (e) {
+                    e.preventDefault();
+                    currentBatchId = $(this).data('batch-id');
+                    currentImageId = $(this).data('image-id');
+
+                    const modal = $('#imageModal');
+                    modal.data('batch-id', currentBatchId);
+                    modal.data('image-id', currentImageId);
+
+                    $.getJSON('/get_image_url', { batch_id: currentBatchId, image_id: currentImageId }, function (response) {
+                        if (response.error) {
+                            showModal('Error', response.error, true);
+                            return;
+                        }
+
+                        loadImage(response.url);
+                        $('#imageModal').modal('show');
+                    }).fail(function (jqXHR, textStatus, errorThrown) {
+                        console.error("Image URL fetch failed:", textStatus, errorThrown, jqXHR.responseText);
+                        const errorMsg = jqXHR.responseJSON?.error || 'Unknown error';
+                        showModal('Error', `Failed to fetch image: ${errorMsg}`, true);
+                    });
+                });
+            }
+
+            function updateBatchDropdown(filteredData) {
+                const batchSelect = $('#batch-select');
+                const currentBatch = batchSelect.val();
+                batchSelect.empty();
+                batchSelect.append('<option value="">All Batches</option>');
+
+                const uniqueBatches = [...new Set(filteredData.map(row => row.batch_id))].filter(id => id).sort();
+                uniqueBatches.forEach(batch => {
+                    batchSelect.append(`<option value="${batch}">${batch}</option>`);
+                });
+
+                if (currentBatch && uniqueBatches.includes(currentBatch)) {
+                    batchSelect.val(currentBatch);
+                }
+            }
+
+            function updatePagination(totalRows, rowLimit) {
+                const isFull = rowLimit === 'full';
+                const maxRows = isFull ? totalRows : parseInt(rowLimit);
+                const totalPages = isFull ? 1 : Math.ceil(totalRows / maxRows);
+                currentPage = Math.min(currentPage, totalPages);
+                currentPage = Math.max(currentPage, 1);
+
+                $('#prev-page').prop('disabled', currentPage === 1 || isFull);
+                $('#next-page').prop('disabled', (currentPage === totalPages || totalRows === 0) || isFull);
+            }
+
+            function fetchQCReport() {
+                const dateRange = $('#date-range-select').val();
+                let fromDate, toDate;
+
+                if (dateRange === 'custom') {
+                    const dates = $('#date-range-picker').val().split(' to ').map(date => date.trim());
+                    fromDate = dates[0];
+                    toDate = dates[1] || dates[0];
+                    if (!fromDate || !toDate) {
+                        showModal('Warning', 'Please select a date range for custom selection.', true);
+                        return;
+                    }
+                    if (!validateDateInputs(fromDate, toDate)) {
+                        return;
+                    }
+                } else {
+                    const { startDate, endDate } = setDateRange(dateRange);
+                    fromDate = startDate;
+                    toDate = endDate;
+                    flatpickrInstance.setDate([startDate, endDate], true);
+                }
+
+                const selectedUser = $('#user-select').val();
+                const selectedBatch = $('#batch-select').val();
+                const selectedStatus = $('#status-select').val();
+                const rowLimit = $('#row-limit').val();
+                const isFull = rowLimit === 'full';
+                let maxRows = isFull ? Infinity : parseInt(rowLimit);
+
+                $('#qc-report-table').html('<tr><td colspan="7" class="loading">Loading data...</td></tr>');
+                $('#stats-box').hide();
+
+                $.getJSON("/get_qc_report", function (response) {
+                    console.log("QC report response:", response);
+                    if (response.error) {
+                        showModal('Error', response.error, true);
+                        $('#qc-report-table').html(
+                            '<tr><td colspan="7" class="text-center">Failed to load data: ' + response.error + '</td></tr>'
+                        );
+                        return;
+                    }
+
+                    allData = response.data || [];
+                    let filteredData = allData;
+
+                    if (fromDate && toDate) {
+                        const fromDateObj = new Date(fromDate);
+                        const toDateObj = new Date(toDate);
+                        toDateObj.setDate(toDateObj.getDate() + 1);
+
+                        filteredData = filteredData.filter(row => {
+                            if (!row.qc_date) return false;
+                            const rowDate = new Date(row.qc_date.split(' ')[0]);
+                            return rowDate >= fromDateObj && rowDate < toDateObj;
+                        });
+                    }
+
+                    if (selectedUser) {
+                        filteredData = filteredData.filter(row => row.unique_userid === selectedUser);
+                    }
+
+                    if (selectedBatch) {
+                        filteredData = filteredData.filter(row => row.batch_id === selectedBatch);
+                    }
+
+                    if (selectedStatus) {
+                        filteredData = filteredData.filter(row => row.status && row.status.toLowerCase() === selectedStatus.toLowerCase());
+                    }
+
+                    updateBatchDropdown(filteredData);
+
+                    if (sortColumn) {
+                        filteredData = sortData([...filteredData], sortColumn, sortDirection);
+                    }
+
+                    if (filteredData.length > 0) {
+                        calculateStats(filteredData);
+                    } else {
+                        $('#stats-box').hide();
+                    }
+
+                    const startIndex = (currentPage - 1) * maxRows;
+                    const endIndex = isFull ? filteredData.length : startIndex + maxRows;
+                    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+                    updatePagination(filteredData.length, rowLimit);
+                    renderTable(paginatedData);
+                }).fail(function (jqXHR, textStatus, errorThrown) {
+                    console.error("QC report fetch failed:", textStatus, errorThrown, jqXHR.responseText);
+                    const errorMsg = jqXHR.responseJSON?.error || 'Unknown error';
+                    showModal('Error', `Failed to fetch QC report: ${errorMsg}`, true);
+                    $('#qc-report-table').html(
+                        '<tr><td colspan="7" class="text-center">Failed to load data: ' + errorMsg + '</td></tr>'
+                    );
+                });
+            }
+
+            $('.sortable').click(function () {
+                const column = $(this).data('sort');
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'asc';
+                }
+
+                $('.sortable').find('.sort-icon').removeClass('sort-asc sort-desc');
+                $(this).find('.sort-icon').addClass(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+
+                currentPage = 1;
+                fetchQCReport();
+            });
+
+            $('#download-excel').click(function () {
+                let filteredData = allData;
+
+                const dateRange = $('#date-range-select').val();
+                let fromDate, toDate;
+
+                if (dateRange === 'custom') {
+                    const dates = $('#date-range-picker').val().split(' to ').map(date => date.trim());
+                    fromDate = dates[0];
+                    toDate = dates[1] || dates[0];
+                } else {
+                    const { startDate, endDate } = setDateRange(dateRange);
+                    fromDate = startDate;
+                    toDate = endDate;
+                }
+
+                const selectedUser = $('#user-select').val();
+                const selectedBatch = $('#batch-select').val();
+                const selectedStatus = $('#status-select').val();
+
+                if (fromDate && toDate) {
+                    const fromDateObj = new Date(fromDate);
+                    const toDateObj = new Date(toDate);
+                    toDateObj.setDate(toDateObj.getDate() + 1);
+
+                    filteredData = filteredData.filter(row => {
+                        if (!row.qc_date) return false;
+                        const rowDate = new Date(row.qc_date.split(' ')[0]);
+                        return rowDate >= fromDateObj && rowDate < toDateObj;
+                    });
+                }
+
+                if (selectedUser) {
+                    filteredData = filteredData.filter(row => row.unique_userid === selectedUser);
+                }
+                if (selectedBatch) {
+                    filteredData = filteredData.filter(row => row.batch_id === selectedBatch);
+                }
+                if (selectedStatus) {
+                    filteredData = filteredData.filter(row => row.status && row.status.toLowerCase() === selectedStatus.toLowerCase());
+                }
+
+                if (sortColumn) {
+                    filteredData = sortData([...filteredData], sortColumn, sortDirection);
+                }
+
+                const exportData = filteredData.map(row => ({
+                    'Unique UserID': row.unique_userid || 'N/A',
+                    'Name': row.qc_reviewer_name || 'N/A',
+                    'Batch ID': row.batch_id || 'N/A',
+                    'Image ID': row.image_id || 'N/A',
+                    'Status': row.status || 'N/A',
+                    'Remark': row.remarks || 'N/A',
+                    'Orientation Error': row.orientation_error || 'N/A',
+                    'QC Date': row.qc_date || 'N/A'
+                }));
+
+                showModal('Success', 'Your Excel file is being prepared for download.');
+                const worksheet = XLSX.utils.json_to_sheet(exportData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'QC Report');
+
+                let filename = 'QC_Report';
+                if (fromDate && toDate) {
+                    filename += `_${fromDate}_to_${toDate}`;
+                }
+                XLSX.writeFile(workbook, filename + '.xlsx');
+            });
+
+            $('#prev-page').click(function () {
+                if (currentPage > 1) {
+                    currentPage--;
+                    fetchQCReport();
+                }
+            });
+
+            $('#next-page').click(function () {
+                currentPage++;
+                fetchQCReport();
+            });
+
+            $('#user-select').change(function () {
+                currentPage = 1;
+                fetchQCReport();
+            });
+
+            $('#batch-select').change(function () {
+                currentPage = 1;
+                fetchQCReport();
+            });
+
+            $('#status-select').change(function () {
+                currentPage = 1;
+                fetchQCReport();
+            });
+
+            $('#row-limit').change(function () {
+                currentPage = 1;
+                fetchQCReport();
+            });
+
+            $('#date-range-select').change(function () {
+                const dateRange = $(this).val();
+                const customControls = $('#custom-date-controls');
+                if (dateRange === 'custom') {
+                    customControls.addClass('active');
+                } else {
+                    customControls.removeClass('active');
+                    const { startDate, endDate } = setDateRange(dateRange);
+                    flatpickrInstance.setDate([startDate, endDate], true);
+                    currentPage = 1;
+                    fetchQCReport();
+                }
+            });
+
+            $('#apply-date-filter').click(function () {
+                const dateRange = $('#date-range-select').val();
+                if (dateRange === 'custom') {
+                    const dates = $('#date-range-picker').val().split(' to ').map(date => date.trim());
+                    const fromDate = dates[0];
+                    const toDate = dates[1] || dates[0];
+                    if (validateDateInputs(fromDate, toDate)) {
+                        currentPage = 1;
+                        fetchQCReport();
+                    }
+                }
+            });
+
+            fetchFilterData();
+
+            fetch('/check_session', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    console.warn("Invalid session, redirecting to login");
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Session check failed:', error);
+                window.location.href = '/login';
+            });
+
+            function getCurrentBatchId() {
+                return $('#imageModal').data('batch-id');
+            }
+
+            function getCurrentImageId() {
+                return $('#imageModal').data('image-id');
+            }
+
+            function setupImageStatusButtons() {
+                const acceptButton = $('#acceptBtn');
+                const rejectButton = $('#rejectBtn');
+
+                if (acceptButton.length) {
+                    acceptButton.off('click').on('click', function() {
+                        const confirmed = confirm('Are you sure you want to accept this image?');
+                        console.log('Accept button clicked, confirmed:', confirmed);
+                        if (confirmed) {
+                            const batchId = getCurrentBatchId();
+                            const imageId = getCurrentImageId();
+                            if (batchId && imageId) {
+                                updateImageStatus(batchId, imageId, 'accepted');
+                            } else {
+                                showModal('Error', 'Cannot identify the current image. Please try again.', true);
+                            }
+                        }
+                    });
+                }
+
+                if (rejectButton.length) {
+                    rejectButton.off('click').on('click', function() {
+                        const confirmed = confirm('Are you sure you want to reject this image?');
+                        console.log('Reject button clicked, confirmed:', confirmed);
+                        if (confirmed) {
+                            const batchId = getCurrentBatchId();
+                            const imageId = getCurrentImageId();
+                            if (batchId && imageId) {
+                                updateImageStatus(batchId, imageId, 'rejected');
+                            } else {
+                                showModal('Error', 'Cannot identify the current image. Please try again.', true);
+                            }
+                        }
+                    });
+                }
+            }
+
+            setupImageStatusButtons();
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                        setupImageStatusButtons();
+                    }
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            function setDateRange(option) {
+                const today = new Date();
+                let fromDate, toDate;
+
+                switch(option) {
+                    case 'today':
+                        fromDate = toDate = today;
+                        break;
+                    case 'yesterday':
+                        fromDate = toDate = new Date(today);
+                        fromDate.setDate(today.getDate() - 1);
+                        toDate.setDate(today.getDate() - 1);
+                        break;
+                    case 'last-7-days':
+                        fromDate = new Date(today);
+                        fromDate.setDate(today.getDate() - 6);
+                        toDate = today;
+                        break;
+                    case 'last-week':
+                        const lastMonday = new Date(today);
+                        lastMonday.setDate(today.getDate() - today.getDay() - 6);
+                        const lastSunday = new Date(lastMonday);
+                        lastSunday.setDate(lastMonday.getDate() + 6);
+                        fromDate = lastMonday;
+                        toDate = lastSunday;
+                        break;
+                    case 'this-month':
+                        fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        toDate = today;
+                        break;
+                    case 'custom':
+                        const dates = $('#date-range-picker').val().split(' to ').map(date => date.trim());
+                        fromDate = new Date(dates[0]);
+                        toDate = new Date(dates[1] || dates[0]);
+                        break;
+                }
+
+                const startDate = formatDate(fromDate);
+                const endDate = formatDate(toDate);
+                return { startDate, endDate };
+            }
+
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+        });
+
+        let canvas, ctx, img;
+        let scale = 1;
+        let rotation = 0;
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let offsetX = 0, offsetY = 0;
+        let lastOffsetX = 0, lastOffsetY = 0;
+
+        $('#imageModal').on('shown.bs.modal', function () {
+            setupImageViewer();
+        });
+
+        $('#imageModal').on('hidden.bs.modal', function () {
+            resetView();
+        });
+
+        function setupImageViewer() {
+            canvas = document.getElementById('imageCanvas');
+            ctx = canvas.getContext('2d');
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            canvas.addEventListener('wheel', handleZoom);
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', drag);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+            canvas.addEventListener('dblclick', resetView);
+
+            document.getElementById('zoomIn').addEventListener('click', () => changeZoom(0.1));
+            document.getElementById('zoomOut').addEventListener('click', () => changeZoom(-0.1));
+            document.getElementById('rotate').addEventListener('click', rotateImage);
+            document.getElementById('fullscreen').addEventListener('click', toggleFullscreen);
+        }
+
+        function resizeCanvas() {
+            const container = document.querySelector('.image-container');
+            if (!container) return;
+
+            canvas.width = container.clientWidth - 40;
+            canvas.height = container.clientHeight - 40;
+
+            canvas.style.maxWidth = '100%';
+            canvas.style.maxHeight = '100%';
+
+            drawImage();
+        }
+
+        function loadImage(imageUrl) {
+            scale = 1;
+            rotation = 0;
+            offsetX = 0;
+            offsetY = 0;
+            lastOffsetX = 0;
+            lastOffsetY = 0;
+
+            img = new Image();
+            img.crossOrigin = 'Anonymous';
+
+            img.onload = function() {
+                const containerWidth = canvas.width;
+                const containerHeight = canvas.height;
+
+                const widthRatio = containerWidth / img.width;
+                const heightRatio = containerHeight / img.height;
+
+                scale = Math.min(widthRatio, heightRatio) * 0.9;
+                drawImage();
+            };
+
+            img.onerror = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '16px Poppins, sans-serif';
+                ctx.fillStyle = '#dc3545';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Error loading image', canvas.width / 2, canvas.height / 2);
+            };
+
+            img.src = imageUrl;
+        }
+
+        function drawImage() {
+            if (!img || !img.complete) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const scaledWidth = img.width * scale;
+            const scaledHeight = img.height * scale;
+            const centerX = (canvas.width - scaledWidth) / 2;
+            const centerY = (canvas.height - scaledHeight) / 2;
+
+            ctx.save();
+            ctx.translate(offsetX + centerX + scaledWidth / 2, offsetY + centerY + scaledHeight / 2);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.scale(scale, scale);
+            ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2);
+            ctx.restore();
+        }
+
+        function handleZoom(e) {
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+
+            const oldScale = scale;
+            scale *= zoomFactor;
+
+            scale = Math.min(Math.max(0.1, scale), 10);
+
+            if (oldScale !== scale) {
+                const scaledDiffX = mouseX - (mouseX * (scale / oldScale));
+                const scaledDiffY = mouseY - (mouseY * (scale / oldScale));
+                offsetX -= scaledDiffX;
+                offsetY -= scaledDiffY;
+                lastOffsetX = offsetX;
+                lastOffsetY = offsetY;
+            }
+
+            drawImage();
+        }
+
+        function changeZoom(delta) {
+            const oldScale = scale;
+            scale += delta;
+            scale = Math.min(Math.max(0.1, scale), 10);
+
+            const scaleFactor = scale / oldScale;
+            offsetX = (offsetX - canvas.width/2) * scaleFactor + canvas.width/2;
+            offsetY = (offsetY - canvas.height/2) * scaleFactor + canvas.height/2;
+            lastOffsetX = offsetX;
+            lastOffsetY = offsetY;
+
+            drawImage();
+        }
+
+        function rotateImage() {
+            rotation = (rotation + 90) % 360;
+            drawImage();
+        }
+
+        function startDrag(e) {
+            const rect = canvas.getBoundingClientRect();
+            dragStartX = e.clientX - rect.left;
+            dragStartY = e.clientY - rect.top;
+            isDragging = true;
+            canvas.style.cursor = 'grabbing';
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            offsetX = lastOffsetX + (x - dragStartX);
+            offsetY = lastOffsetY + (y - dragStartY);
+
+            drawImage();
+        }
+
+        function endDrag() {
+            if (isDragging) {
+                lastOffsetX = offsetX;
+                lastOffsetY = offsetY;
+                isDragging = false;
+                canvas.style.cursor = 'grab';
+            }
+        }
+
+        function resetView() {
+            scale = 1;
+            rotation = 0;
+            offsetX = 0;
+            offsetY = 0;
+            lastOffsetX = 0;
+            lastOffsetY = 0;
+            drawImage();
+        }
+
+        function toggleFullscreen() {
+            const modalContent = document.querySelector('#imageModal .modal-content');
+
+            if (!document.fullscreenElement) {
+                if (modalContent.requestFullscreen) {
+                    modalContent.requestFullscreen();
+                } else if (modalContent.mozRequestFullScreen) {
+                    modalContent.mozRequestFullScreen();
+                } else if (modalContent.webkitRequestFullscreen) {
+                    modalContent.webkitRequestFullscreen();
+                } else if (modalContent.msRequestFullscreen) {
+                    modalContent.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        document.addEventListener('fullscreenchange', adjustFullscreenLayout);
+        document.addEventListener('webkitfullscreenchange', adjustFullscreenLayout);
+        document.addEventListener('mozfullscreenchange', adjustFullscreenLayout);
+        document.addEventListener('MSFullscreenChange', adjustFullscreenLayout);
+
+        function adjustFullscreenLayout() {
+            if (document.fullscreenElement) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight - 100;
+            } else {
+                resizeCanvas();
+            }
+            drawImage();
+        }
+
+        function updateImageStatus(batchId, imageId, status) {
+            const data = {
+                batch_id: batchId,
+                image_id: imageId,
+                status: status,
+                remarks: ''
+            };
+
+            console.log("Sending data to update status:", data);
+
+            $.ajax({
+                url: '/qc/update_image_status',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    console.log("Status update success:", response);
+                    showModal('Success', `Image ${status} successfully`);
+
+                    updateUIAfterStatusChange(batchId, imageId, status);
+                    $('#imageModal').modal('hide');
+                    fetchQCReport();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Status update error:", xhr.responseText);
+                    let errorMsg = 'Failed to update status';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response && response.error) {
+                            errorMsg = response.error;
+                        }
+                    } catch (e) {
+                        console.error("Could not parse error response:", e);
+                    }
+                    showModal('Error', errorMsg, true);
+                }
+            });
+        }
+
+        function updateUIAfterStatusChange(batchId, imageId, status) {
+            console.log(`Updating UI for batchId: ${batchId}, imageId: ${imageId}, status: ${status}`);
+
+            const $row = $(`#qc-report-table tr`).filter(function() {
+                const rowBatchId = $(this).find('td:eq(2)').text();
+                const rowImageId = $(this).find('td:eq(3)').text();
+                return rowBatchId === batchId && rowImageId === imageId;
+            });
+
+            if ($row.length) {
+                const $statusCell = $row.find('td:eq(4)');
+                $statusCell.text(status.charAt(0).toUpperCase() + status.slice(1));
+                $statusCell.removeClass('status-accepted status-rejected');
+                $statusCell.addClass(`status-${status.toLowerCase()}`);
+                console.log(`Updated status cell for image ${imageId} to ${status}`);
+            } else {
+                console.warn(`Row not found for batchId: ${batchId}, imageId: ${imageId}`);
+            }
+        }
+    </script>
+</body>
+</html>

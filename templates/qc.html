@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>QC Tasks</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 20vw;
+            min-width: 200px;
+            max-width: 300px;
+            background-color: #1a1a1a;
+            padding-top: 1rem;
+            overflow-y: auto;
+        }
+
+        .sidebar a {
+            color: #fff;
+            padding: 1rem 1.5rem;
+            display: block;
+            text-decoration: none;
+            font-size: clamp(0.9rem, 1.2vw, 1rem);
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #889E73;
+        }
+
+        .content {
+            margin-left: 20vw;
+            min-height: calc(100vh - 60px);
+            padding: 2vw;
+            flex: 1;
+        }
+
+        .task-heading {
+            font-size: clamp(1.5rem, 2.5vw, 2rem);
+            font-weight: 700;
+            margin-bottom: 2rem;
+            line-height: 1.2;
+        }
+
+        .folder-card {
+            border: 2px solid #889E73;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: transform 0.2s;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .folder-card:hover {
+            transform: scale(1.03);
+            background-color: #e9ecef;
+        }
+
+        .folder-icon {
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: #889E73;
+        }
+
+        .folder-title {
+            font-size: clamp(1rem, 1.5vw, 1.2rem);
+            font-weight: 600;
+            margin-top: 0.5rem;
+            word-break: break-word;
+        }
+
+        .image-count {
+            font-size: clamp(0.8rem, 1vw, 0.9rem);
+            color: #333;
+            margin: 0.5rem 0;
+        }
+
+        .btn-complete {
+            margin-top: 0.5rem;
+            background-color: #1C2526;
+            border-color: #1C2526;
+            color: #FFFFFF;
+            font-size: clamp(0.8rem, 1vw, 0.9rem);
+            padding: 0.5rem 1rem;
+            width: 100%;
+            max-width: 200px;
+            align-self: center;
+        }
+
+        .btn-complete:hover {
+            background-color: #2E3839;
+            border-color: #2E3839;
+            color: #FFFFFF;
+        }
+
+        .btn-complete:focus,
+        .btn-complete:active {
+            background-color: #1C2526 !important;
+            border-color: #1C2526 !important;
+            box-shadow: 0 0 0 0.2rem rgba(28, 37, 38, 0.5);
+        }
+
+        .alert-message {
+            margin-top: 1rem;
+        }
+
+        .custom-footer {
+            margin-left: 20vw;
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 0.5rem 2vw;
+            font-size: clamp(0.7rem, 0.9vw, 0.8rem);
+            border-top: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .custom-footer a {
+            color: #ccc;
+            text-decoration: none;
+        }
+
+        .custom-footer a:hover {
+            color: #fff;
+        }
+
+        .logo-img {
+            width: 80%;
+            max-width: 180px;
+            height: auto;
+            margin: 0 auto;
+            display: block;
+            padding: 0.5rem 0;
+        }
+
+        @media (max-width: 1400px) {
+            .sidebar {
+                width: 18vw;
+            }
+            .content, .custom-footer {
+                margin-left: 18vw;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 200px;
+            }
+            .content, .custom-footer {
+                margin-left: 200px;
+            }
+            .task-heading {
+                font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .sidebar {
+                width: 15vw;
+                max-width: 350px;
+            }
+            .content, .custom-footer {
+                margin-left: 15vw;
+            }
+            .task-heading {
+                font-size: clamp(1.8rem, 2.5vw, 2.2rem);
+            }
+            .folder-icon {
+                font-size: 3.5rem;
+            }
+            .folder-title {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
+             alt="Purvaj.com Logo" 
+             class="logo-img">
+        <a href="/qc" class="active"><i class="fas fa-tasks me-2"></i>Tasks</a>
+        <a href="/qc_history"><i class="fas fa-history me-2"></i>History</a>
+        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <div class="content">
+        <div class="container mt-4">
+            <h2 class="task-heading">Assigned Tasks</h2>
+            <div class="row" id="tasks-container">
+                <!-- Folder cards will be added here -->
+            </div>
+            <div id="alert-container" class="alert-message"></div>
+        </div>
+    </div>
+
+    <footer class="custom-footer text-muted">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span style="color:#f8f9fa;">© 2025 Purvaj</span>
+            <div>
+                <a href="/about" class="me-3">About</a>
+                <a href="/contact" class="me-3">Contact</a>
+                <a href="/privacy">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        $(document).ready(function () {
+            fetch("/get_qc_tasks")
+                .then(res => res.json())
+                .then(tasks => {
+                    if (tasks.length === 0) {
+                        $("#tasks-container").html("<p>No tasks assigned.</p>");
+                        return;
+                    }
+
+                    tasks.forEach(task => {
+                        const taskCard = `
+                            <div class="col-md-4 col-lg-3 mb-4">
+                                <div class="folder-card" ondblclick="goToTask('${task.batch_id}', '${task.upload_date}')">
+                                    <div class="folder-icon"><i class="fas fa-folder"></i></div>
+                                    <div class="folder-title">${task.batch_id}</div>
+                                    <div class="image-count">${task.image_count} images</div>
+                                    <button class="btn btn-complete" onclick="markQcTaskAsComplete('${task.batch_id}', '${task.upload_date}')">Mark as Complete</button>
+                                </div>
+                            </div>
+                        `;
+                        $("#tasks-container").append(taskCard);
+                    });
+                })
+                .catch(err => {
+                    console.error("Error loading tasks:", err);
+                    $("#tasks-container").html("<p>Error loading tasks.</p>");
+                });
+        });
+
+        function goToTask(batchId, uploadDate) {
+            const encodedBatch = encodeURIComponent(batchId);
+            const encodedDate = encodeURIComponent(uploadDate);
+            window.location.href = `/viewer?batch_id=${encodedBatch}&upload_date=${encodedDate}`;
+        }
+
+        function markQcTaskAsComplete(batchId, uploadDate) {
+            const confirmation = confirm("Are you sure you want to mark this task as complete?");
+            if (!confirmation) return;
+
+            fetch('/qc_status_insert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ batch_id: batchId, upload_date: uploadDate })
+            })
+            .then(res => res.json())
+            .then(response => {
+                if (response.success) {
+                    alert("QC status marked as complete.");
+                    location.reload();
+                } else {
+                    showAlertMessage(response.message);
+                }
+            })
+            .catch(err => {
+                console.error("Error marking task as complete:", err);
+                showAlertMessage("Error marking QC task as complete.");
+            });
+        }
+
+        function showAlertMessage(message) {
+            $("#alert-container").html(`
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/check_session', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Session check failed:', error);
+                window.location.href = '/login';
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'92fb1c788ae6c01f',t:'MTc0NDU0ODg1Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>

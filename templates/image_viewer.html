@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image Viewer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png" style="width: 96px; height: 96px;">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #000;
+      font-family: 'Poppins', sans-serif;
+      color: white;
+    }
+    #viewer-container {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
+    #controls, #navigation, #reject-reasons, #image-name, #orientation-error-container {
+      position: absolute;
+      z-index: 100;
+    }
+    #controls {
+      top: 20px;
+      right: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #orientation-error-container {
+      right: 40px;
+      background: rgba(255,255,255,0.05);
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #orientation-error-container input[type="checkbox"] {
+      margin: 0;
+      width: 16px;
+      height: 16px;
+    }
+    #orientation-error-container label {
+      margin: 0;
+      padding-top: 2px;
+    }
+    #navigation {
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+    }
+    #image-name {
+      bottom: 60px;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-size: 16px;
+    }
+    .btn {
+      margin: 5px;
+    }
+    #reject-reasons {
+      display: none;
+      right: 40px;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    #reject-reasons label {
+      color: #fff;
+    }
+    #reject-reasons select {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      width: 100%;
+    }
+    #reject-reasons .btn-primary {
+      background: #889E73;
+      border: none;
+    }
+    #reject-reasons .btn-primary:hover {
+      background: #0056b3;
+    }
+    #custom-reason {
+      display: none;
+      margin-top: 10px;
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 5px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="viewer-container">
+    <canvas id="imageCanvas"></canvas>
+
+    <!-- Controls -->
+    <div id="controls">
+      <button class="btn btn-success" id="acceptBtn">Accept (A)</button>
+      <button class="btn btn-danger" id="rejectBtn">Reject (R)</button>
+      <a href="/qc" class="btn btn-secondary" id="backBtn">Back (B)</a>
+    </div>
+
+    <!-- Orientation Error Checkbox -->
+    <div id="orientation-error-container">
+      <input type="checkbox" id="orientation-error" />
+      <label for="orientation-error">Orientation Issue (O)</label>
+    </div>
+
+    <!-- Reject Reason Panel -->
+    <div id="reject-reasons">
+      <label for="reasons">Reason:</label>
+      <select id="reasons" class="form-select">
+        <option value="readability">Readability</option>
+        <option value="cropped">Cropped</option>
+        <option value="obscurant">Obscurant</option>
+        <option value="specification">Poor Lighting</option>
+        <option value="duplicate">Duplicate</option>
+        <option value="other">Other</option>
+      </select>
+      <input type="text" id="custom-reason" placeholder="Type custom reason"/>
+      <button class="btn btn-primary mt-2" id="confirmReject">Confirm (C)</button>
+    </div>
+
+    <!-- Image Name -->
+    <div id="image-name"></div>
+
+    <!-- Navigation Buttons -->
+    <div id="navigation">
+      <button class="btn btn-light" id="prevBtn">Previous←</button>
+      <button class="btn btn-light" id="nextBtn">Next→</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('imageCanvas');
+    const ctx = canvas.getContext('2d');
+    let currentIndex = 0;
+    let images = [];
+    let scale = 1;
+    let rotation = 0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let isDragging = false;
+    let startX, startY;
+    let rejectPopupVisible = false;
+    const qcStatus = {{ qc_status|tojson }};
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const batch_id = urlParams.get('batch_id');
+    console.log('Batch ID:', batch_id);
+
+    function positionElements() {
+      const controls = document.getElementById('controls');
+      const orientationContainer = document.getElementById('orientation-error-container');
+      const rejectReasons = document.getElementById('reject-reasons');
+      
+      const controlsHeight = controls.offsetHeight;
+      const controlsTop = parseInt(getComputedStyle(controls).top);
+      const newTop = controlsTop + controlsHeight + 15;
+      
+      orientationContainer.style.top = `${newTop}px`;
+      rejectReasons.style.top = `${newTop + orientationContainer.offsetHeight + 15}px`;
+    }
+
+    function updateImageName() {
+      const imageNameDiv = document.getElementById('image-name');
+      imageNameDiv.textContent = images[currentIndex] ? `Image: ${getCurrentImageName()}` : '';
+    }
+
+    function drawImage() {
+      if (!images.length || currentIndex >= images.length || currentIndex < 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.fillText("No images available", canvas.width / 2 - 80, canvas.height / 2);
+        document.getElementById('image-name').textContent = '';
+        return;
+      }
+
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = images[currentIndex];
+      console.log('Loading image:', img.src);
+      img.onload = () => {
+        console.log('Image loaded successfully:', img.src);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Fit image to canvas if scale is at default (1) or reset
+        let displayScale = scale;
+        if (scale === 1) {
+          const scaleX = canvas.width / img.width;
+          const scaleY = canvas.height / img.height;
+          displayScale = Math.min(scaleX, scaleY, 1); // Ensure image fits within canvas
+        }
+
+        ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
+        ctx.rotate(rotation * Math.PI / 180);
+        const scaledWidth = img.width * displayScale;
+        const scaledHeight = img.height * displayScale;
+        ctx.drawImage(img, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
+
+        const currentImageName = getCurrentImageName();
+        const status = qcStatus[currentImageName];
+        if (status) {
+          ctx.font = "50px Arial";
+          ctx.textAlign = "center";
+          ctx.fillStyle = status === 'accepted' ? 'green' : 'red';
+          ctx.fillText(status.toUpperCase(), 0, 0);
+        }
+
+        updateImageName();
+      };
+      img.onerror = () => {
+        console.error('Error loading image:', img.src);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.fillText("Error loading image", canvas.width / 2 - 80, canvas.height / 2);
+        document.getElementById('image-name').textContent = '';
+      };
+    }
+
+    function fetchImages() {
+      console.log('Fetching images for batch_id:', batch_id);
+      const upload_date = urlParams.get('upload_date');
+      fetch(`/get_images?batch_id=${batch_id}&upload_date=${encodeURIComponent(upload_date)}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('Received data:', data);
+          images = data.images || [];
+          console.log('Image URLs:', images);
+          if (!images.length) {
+            console.warn('No images found for batch_id:', batch_id);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText("No images available", canvas.width / 2 - 80, canvas.height / 2);
+          }
+          currentIndex = 0;
+          resetTransform();
+          drawImage();
+          positionElements();
+        })
+        .catch(err => {
+          console.error("Error fetching image list:", err);
+          alert("Failed to load image list: " + err);
+        });
+    }
+
+    function getCurrentImageName() {
+      if (!images[currentIndex]) return "";
+      const url = new URL(images[currentIndex]);
+      return url.pathname.split('/').pop();
+    }
+
+    function toggleRejectPopup() {
+      const rejectReasons = document.getElementById('reject-reasons');
+      rejectPopupVisible = !rejectPopupVisible;
+      rejectReasons.style.display = rejectPopupVisible ? 'block' : 'none';
+      if (rejectPopupVisible) document.getElementById('reasons').focus();
+    }
+
+    function resetTransform() {
+      scale = 1;
+      offsetX = 0;
+      offsetY = 0;
+      rotation = 0;
+    }
+
+    document.getElementById('acceptBtn').addEventListener('click', () => {
+      updateStatus('accepted', 'ok');
+    });
+
+    document.getElementById('rejectBtn').addEventListener('click', toggleRejectPopup);
+
+    document.getElementById('reasons').addEventListener('change', () => {
+      const reason = document.getElementById('reasons').value;
+      const customInput = document.getElementById('custom-reason');
+      customInput.style.display = reason === 'other' ? 'block' : 'none';
+      if (reason === 'other') customInput.focus();
+    });
+
+    document.getElementById('confirmReject').addEventListener('click', () => {
+      let reason = document.getElementById('reasons').value;
+      const customInput = document.getElementById('custom-reason');
+      if (reason === 'other') {
+        reason = customInput.value.trim();
+        if (!reason) return alert("Please enter a custom reason.");
+      }
+      if (document.getElementById('orientation-error').checked) {
+        reason += " + Orientational error";
+      }
+      updateStatus('rejected', reason);
+    });
+
+    function updateStatus(status, remarks) {
+      const imageName = getCurrentImageName();
+      const orientationError = document.getElementById('orientation-error').checked;
+      
+      fetch('/update_qc_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          batch_id, 
+          image_id: imageName, 
+          status, 
+          remarks,
+          orientation_error: orientationError
+        })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            qcStatus[imageName] = status;
+            document.getElementById('orientation-error').checked = false;
+            if (status === 'rejected') {
+              document.getElementById('reject-reasons').style.display = 'none';
+              document.getElementById('custom-reason').style.display = 'none';
+              document.getElementById('custom-reason').value = '';
+              rejectPopupVisible = false;
+            }
+            currentIndex = Math.min(currentIndex + 1, images.length - 1);
+            resetTransform();
+            drawImage();
+            positionElements();
+          } else {
+            console.error('Update failed:', data.error);
+            alert('Failed to update status: ' + data.error);
+          }
+        })
+        .catch(err => {
+          console.error(`Error updating status to ${status}:`, err);
+          alert('Failed to update status.');
+        });
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        resetTransform();
+        drawImage();
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (currentIndex < images.length - 1) {
+        currentIndex++;
+        resetTransform();
+        drawImage();
+      }
+    });
+
+    // Mouse panning
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) { // Left mouse button
+        isDragging = true;
+        startX = e.clientX - offsetX;
+        startY = e.clientY - offsetY;
+        canvas.style.cursor = 'grabbing';
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        offsetX = e.clientX - startX;
+        offsetY = e.clientY - startY;
+        drawImage();
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    });
+
+    // Mouse wheel zooming centered on mouse position
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const mouseX = e.clientX - canvas.width / 2 - offsetX;
+      const mouseY = e.clientY - canvas.height / 2 - offsetY;
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      
+      // Adjust offset to zoom towards mouse position
+      offsetX = mouseX - (mouseX - offsetX) * zoomFactor;
+      offsetY = mouseY - (mouseY - offsetY) * zoomFactor;
+      scale *= zoomFactor;
+      scale = Math.min(Math.max(0.01, scale), 5); // Allow greater zoom-out
+      drawImage();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      const customInput = document.getElementById('custom-reason');
+      const inputFocused = document.activeElement === customInput;
+
+      if (inputFocused && e.key !== 'c') return;
+      if (["a", "r", "c", "b", "o", "ArrowLeft", "ArrowRight", "+", "-", "z"].includes(e.key)) e.preventDefault();
+
+      switch (e.key) {
+        case '+': 
+        case '=': // Handle both '+' and '=' for convenience
+          scale *= 1.1; 
+          scale = Math.min(scale, 5);
+          drawImage();
+          break;
+        case '-': 
+          scale *= 0.9; 
+          scale = Math.max(0.01, scale); // Allow greater zoom-out
+          drawImage();
+          break;
+        case 'z': 
+          rotation = (rotation + 90) % 360; 
+          drawImage();
+          break;
+        case 'ArrowLeft': 
+          if (currentIndex > 0) {
+            currentIndex--;
+            resetTransform();
+            drawImage();
+          }
+          break;
+        case 'ArrowRight': 
+          if (currentIndex < images.length - 1) {
+            currentIndex++;
+            resetTransform();
+            drawImage();
+          }
+          break;
+        case 'a': 
+          document.getElementById('acceptBtn').click(); 
+          return;
+        case 'r': 
+          toggleRejectPopup(); 
+          return;
+        case 'c': 
+          if (rejectPopupVisible) document.getElementById('confirmReject').click(); 
+          return;
+        case 'b': 
+          window.location.href = '/qc'; 
+          return;
+        case 'o': 
+          const checkbox = document.getElementById('orientation-error');
+          checkbox.checked = !checkbox.checked;
+          return;
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      drawImage();
+      positionElements();
+    });
+
+    fetchImages();
+  </script>
+</body>
+</html>

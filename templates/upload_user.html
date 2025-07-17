@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC Users</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png" style="width: 96px; height: 96px;">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #ffffff; color: #000000; }
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            background-color: #1a1a1a;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: #fff;
+            padding: 15px 20px;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #889E73;
+        }
+        .content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; border: 1px solid #889E73; }
+        th, td { padding: 10px; border: 1px solid #000; text-align: left; }
+        th { background-color: #000; color: white; }
+        .form-container { display: none; max-width: 400px; margin-top: 20px; }
+        .form-control { margin-bottom: 10px; }
+        .add-user-link { cursor: pointer; color: #889E73; text-decoration: none; font-weight: bold; }
+        .add-user-link:hover { text-decoration: underline; }
+
+        html, body {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+        .content {
+            flex: 1;
+        }
+        .custom-footer {
+            margin-left: 250px; /* same as sidebar width */
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 6px 20px;
+            font-size: 13px;
+            border-top: 1px solid #333;
+        }
+        .custom-footer a {
+            color: #ccc;
+        }
+        .custom-footer a:hover {
+            color: #fff;
+        }
+
+        .logo-img {
+    width: 180px; /* Standard logo width */
+    height: auto; /* Maintains aspect ratio */
+    margin: 0 auto; /* Centers the logo */
+    display: block; /* Ensures proper centering */
+    padding: 10px 0; /* Adds some vertical spacing */
+}
+
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
+     alt="Purvaj.com Logo" 
+     class="logo-img">
+        <!-- <h3 class="text-center text-white mb-4">Admin Panel</h3> -->
+        <a href="/ready_to_allocate"><i class="fas fa-tasks me-2"></i>Ready to Allocate</a>
+        <a href="/allocation_history"><i class="fas fa-history me-2"></i>Allocation History</a>
+        <a href="/qc_user" ><i class="fas fa-users me-2"></i>QC Users</a>
+        <a href="/upload_user" class="active"><i class="fas fa-user-plus me-2"></i>Upload Users</a>
+        <a href="/qc_report"><i class="fas fa-clipboard-check me-2"></i>QC Report</a>
+        <a href="/logout" class="mt-auto"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <div class="content">
+        <div class="container mt-4">
+            <h2 class="fw-bold">Upload Users</h2>
+            <a class="add-user-link" id="toggle-form">+ Add New User</a>
+            
+            <div class="form-container" id="user-form">
+                <input type="text" id="unique_userid" class="form-control" placeholder="Unique UserID">
+                <input type="text" id="name" class="form-control" placeholder="Name of vendor">
+                <input type="text" id="loginid" class="form-control" placeholder="Login ID">
+                <input type="password" id="password" class="form-control" placeholder="Password">
+                <input type="password" id="confirm_password" class="form-control" placeholder="Confirm Password">
+                <input type="email" id="email" class="form-control" placeholder="Email">
+                <button class="btn btn-primary w-100" id="submit-user" style="background-color: #020202; border-color: #2e302e;">Submit</button>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Unique UserID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table">
+                    <!-- Data will be inserted dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <footer class="custom-footer text-muted">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span style="color:#f8f9fa;">&copy; 2025 Purvaj</span>
+            <div>
+                <a href="/about" class="text-decoration-none me-3">About</a>
+                <a href="/contact" class="text-decoration-none me-3">Contact</a>
+                <a href="/privacy" class="text-decoration-none">Privacy</a>
+            </div>
+        </div>
+    </footer>
+    
+    <script>
+$(document).ready(function () {
+    function loadUsers() {
+        $.getJSON("/get_upload_users", function (data) {
+            let tableBody = "";
+            data.forEach(user => {
+                tableBody += `<tr>
+                    <td>${user.unique_userid}</td>
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                </tr>`;
+            });
+            $("#users-table").html(tableBody);
+        });
+    }
+    loadUsers();
+    
+    $("#toggle-form").click(function () {
+        $("#user-form").slideToggle();
+    });
+    
+    $("#submit-user").click(function () {
+        let uniqueuserid=$("#unique_userid").val().trim();
+        let name = $("#name").val().trim();
+        let loginid = $("#loginid").val().trim();
+        let password = $("#password").val().trim();
+        let confirm_password = $("#confirm_password").val().trim();
+        let email = $("#email").val().trim();
+        
+        if (!uniqueuserid|!name || !loginid || !password || !email) {
+            alert("All fields are required!");
+            return;
+        }
+        
+        if (password !== confirm_password) {
+            alert("Passwords do not match!");
+            return;
+        }
+        
+        fetch("/add_upload_user", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uniqueuserid,name, loginid, passwords: password, email })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            if (data.success) {
+                $("#user-form").slideUp();
+                loadUsers();
+            }
+        })
+        .catch(err => {
+            console.error("Error adding user:", err);
+            alert("Failed to add user.");
+        });
+    });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/check_session', {
+        method: 'GET',
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.valid) {
+            window.location.href = '/login';
+        }
+    })
+    .catch(error => {
+        console.error('Session check failed:', error);
+        window.location.href = '/login';
+    });
+});
+    </script>
+</body>
+</html>
