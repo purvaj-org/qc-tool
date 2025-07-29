@@ -2014,30 +2014,53 @@ def download_batch_zip():
         temp_zip.close()
         
         try:
-            with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for image_id in filtered_image_ids:
-                    try:
-                        # Construct S3 path
-                        s3_path = batch_id.replace('_', '/') + '/' + image_id
-                        
-                        # Generate presigned URL
-                        presigned_url = s3_client.generate_presigned_url(
-                            'get_object',
-                            Params={'Bucket': SPACES_NAME, 'Key': s3_path},
-                            ExpiresIn=300
-                        )
-                        
-                        # Download image from S3
-                        response = requests.get(presigned_url, timeout=30)
-                        if response.status_code == 200:
-                            # Add image to ZIP
-                            zipf.writestr(image_id, response.content)
-                        else:
-                            print(f"Failed to download image {image_id}: HTTP {response.status_code}")
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            import requests.adapters
+            
+            # Create HTTP session with connection pooling for better performance
+            http_session = requests.Session()
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=20,
+                pool_maxsize=20,
+                max_retries=3
+            )
+            http_session.mount('http://', adapter)
+            http_session.mount('https://', adapter)
+            
+            def download_image(image_id):
+                try:
+                    # Construct S3 path
+                    s3_path = batch_id.replace('_', '/') + '/' + image_id
                     
-                    except Exception as e:
-                        print(f"Error downloading image {image_id}: {str(e)}")
-                        continue
+                    # Generate presigned URL
+                    presigned_url = s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': SPACES_NAME, 'Key': s3_path},
+                        ExpiresIn=600  # Increased timeout for parallel downloads
+                    )
+                    
+                    # Download image from S3
+                    response = http_session.get(presigned_url, timeout=15)
+                    if response.status_code == 200:
+                        return image_id, response.content
+                    else:
+                        print(f"Failed to download image {image_id}: HTTP {response.status_code}")
+                        return image_id, None
+                
+                except Exception as e:
+                    print(f"Error downloading image {image_id}: {str(e)}")
+                    return image_id, None
+            
+            with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Download images in parallel (max 10 concurrent downloads)
+                with ThreadPoolExecutor(max_workers=10) as executor:
+                    future_to_image = {executor.submit(download_image, image_id): image_id 
+                                     for image_id in filtered_image_ids}
+                    
+                    for future in as_completed(future_to_image):
+                        image_id, content = future.result()
+                        if content:
+                            zipf.writestr(image_id, content)
             
             # Send ZIP file
             filename = f"{batch_id}_{status_filter}_images_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"

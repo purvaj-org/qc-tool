@@ -474,6 +474,11 @@
                         responseType: 'blob'
                     },
                     success: function(data, textStatus, xhr) {
+                        // Clear progress interval
+                        if (window.downloadInterval) {
+                            clearInterval(window.downloadInterval);
+                        }
+                        
                         // Create download link
                         const blob = new Blob([data], { type: 'application/zip' });
                         const url = window.URL.createObjectURL(blob);
@@ -504,6 +509,10 @@
                         }, 2000);
                     },
                     error: function(xhr) {
+                        // Clear progress interval
+                        if (window.downloadInterval) {
+                            clearInterval(window.downloadInterval);
+                        }
                         alert('Error downloading batch: ' + (xhr.responseJSON?.error || 'Unknown error'));
                         progressBar.hide();
                     }
@@ -512,13 +521,13 @@
                 // Simulate progress (since we can't track actual progress easily)
                 let progress = 0;
                 const interval = setInterval(() => {
-                    progress += Math.random() * 15;
-                    if (progress > 90) progress = 90;
+                    progress += Math.random() * 10;
+                    if (progress > 95) progress = 95;
                     progressBarInner.css('width', progress + '%').text(Math.round(progress) + '%');
-                }, 500);
+                }, 1000);
 
-                // Clear interval when done (handled in success/error callbacks)
-                setTimeout(() => clearInterval(interval), 10000);
+                // Store interval to clear it in success/error callbacks
+                window.downloadInterval = interval;
             }
 
             function clearFilters() {
