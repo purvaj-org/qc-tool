@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Batches - Purvaj</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            background-color: #1a1a1a;
+            padding-top: 1rem;
+            transition: transform 0.3s ease;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .sidebar a {
+            color: #fff;
+            padding: 0.75rem 1.25rem;
+            display: block;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #889E73;
+        }
+
+        /* Content */
+        .content {
+            margin-left: 250px;
+            padding: 1.5rem;
+            flex: 1;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Logo */
+        .logo-img {
+            width: 80%;
+            max-width: 180px;
+            height: auto;
+            margin: 0 auto;
+            display: block;
+            padding: 0.625rem 0;
+        }
+
+        /* Hamburger Menu */
+        .hamburger {
+            display: none;
+            font-size: 1.5rem;
+            color: #fff;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+
+        /* Filter Card */
+        .filter-card {
+            background: #f8f9fa;
+            border: 1px solid #889E73;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Form styling */
+        .form-control, .form-select {
+            border: 1px solid #889E73;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #7b965c;
+            box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background-color: #889E73;
+            border-color: #889E73;
+        }
+
+        .btn-primary:hover {
+            background-color: #7b965c;
+            border-color: #7b965c;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        /* Progress bar */
+        .progress {
+            height: 1.5rem;
+            background-color: #e9ecef;
+            border-radius: 0.375rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .progress-bar {
+            background-color: #889E73;
+            transition: width 0.3s ease;
+        }
+
+        /* Results area */
+        .results-area {
+            margin-top: 2rem;
+        }
+
+        .batch-item {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .batch-item h5 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+        }
+
+        .batch-info {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        .custom-footer {
+            margin-left: 250px;
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 0.5rem 1.5rem;
+            font-size: 0.8rem;
+            border-top: 1px solid #333;
+            transition: margin-left 0.3s ease;
+        }
+
+        .custom-footer a {
+            color: #ccc;
+            text-decoration: none;
+        }
+
+        .custom-footer a:hover {
+            color: #fff;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 70vw;
+                max-width: 250px;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .content, .custom-footer {
+                margin-left: 0;
+            }
+
+            .hamburger {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1100;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .content {
+                padding: 1rem;
+            }
+
+            .custom-footer {
+                font-size: 0.7rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .logo-img {
+                max-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hamburger Button -->
+    <button class="hamburger"><i class="fas fa-bars"></i></button>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
+             alt="Purvaj.com Logo" 
+             class="logo-img">
+        <a href="/ready_to_allocate"><i class="fas fa-tasks me-2"></i>Ready to Allocate</a>
+        <a href="/allocation_history"><i class="fas fa-history me-2"></i>Allocation History</a>
+        <a href="/qc_user"><i class="fas fa-users me-2"></i>QC Users</a>
+        <a href="/upload_user"><i class="fas fa-user-plus me-2"></i>Upload Users</a>
+        <a href="/qc_report"><i class="fas fa-clipboard-check me-2"></i>QC Report</a>
+        <a href="/download_batches" class="active"><i class="fas fa-download me-2"></i>Download</a>
+        <a href="/logout" class="mt-auto"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="container mt-4">
+            <h2 class="fw-bold">Download Batches</h2>
+            <p class="text-muted">Filter and download image batches from S3 storage</p>
+            
+            <!-- Filters Section -->
+            <div class="filter-card">
+                <h4 class="mb-3">Filter Options</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="searchBatchId" class="form-label">Search Batch ID</label>
+                        <input type="text" id="searchBatchId" class="form-control" placeholder="Enter batch ID to search...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="batchIdDropdown" class="form-label">Select Batch ID</label>
+                        <select id="batchIdDropdown" class="form-select">
+                            <option value="">-- Select Batch ID --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="statusFilter" class="form-label">Status Filter</label>
+                        <select id="statusFilter" class="form-select">
+                            <option value="">All Images</option>
+                            <option value="accepted">Accepted Only</option>
+                            <option value="rejected">Rejected Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="vendorFilter" class="form-label">Vendor</label>
+                        <select id="vendorFilter" class="form-select">
+                            <option value="">All Vendors</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button id="searchBatches" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Search Batches
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button id="clearFilters" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress" id="downloadProgress">
+                <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-area">
+                <div id="searchResults">
+                    <!-- Search results will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="custom-footer">
+        <div class="container d-flex justify-content-between align-items-center flex-wrap">
+            <span>© 2025 Purvaj</span>
+            <div>
+                <a href="/about" class="text-decoration-none me-3">About</a>
+                <a href="/contact" class="text-decoration-none me-3">Contact</a>
+                <a href="/privacy" class="text-decoration-none">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        $(document).ready(function () {
+            // Hamburger Menu Toggle
+            $('.hamburger').click(function () {
+                $('.sidebar').toggleClass('active');
+            });
+
+            // Close sidebar when clicking outside on mobile
+            $(document).click(function (e) {
+                if ($(window).width() <= 992) {
+                    if (!$(e.target).closest('.sidebar').length && !$(e.target).closest('.hamburger').length) {
+                        $('.sidebar').removeClass('active');
+                    }
+                }
+            });
+
+            // Load initial data
+            loadBatchIds();
+            loadVendors();
+
+            // Event listeners
+            $('#searchBatches').click(searchBatches);
+            $('#clearFilters').click(clearFilters);
+            $('#searchBatchId').on('input', function() {
+                const searchValue = $(this).val();
+                if (searchValue) {
+                    $('#batchIdDropdown').val('');
+                }
+            });
+            $('#batchIdDropdown').change(function() {
+                const selectedValue = $(this).val();
+                if (selectedValue) {
+                    $('#searchBatchId').val('');
+                }
+            });
+
+            function loadBatchIds() {
+                $.getJSON('/api/download/batch-ids')
+                    .done(function(data) {
+                        const dropdown = $('#batchIdDropdown');
+                        dropdown.empty().append('<option value="">-- Select Batch ID --</option>');
+                        data.batch_ids.forEach(function(batchId) {
+                            dropdown.append(`<option value="${batchId}">${batchId}</option>`);
+                        });
+                    })
+                    .fail(function() {
+                        console.error('Failed to load batch IDs');
+                    });
+            }
+
+            function loadVendors() {
+                $.getJSON('/api/download/vendors')
+                    .done(function(data) {
+                        const dropdown = $('#vendorFilter');
+                        dropdown.empty().append('<option value="">All Vendors</option>');
+                        data.vendors.forEach(function(vendor) {
+                            dropdown.append(`<option value="${vendor.unique_userid}">${vendor.name}</option>`);
+                        });
+                    })
+                    .fail(function() {
+                        console.error('Failed to load vendors');
+                    });
+            }
+
+            function searchBatches() {
+                const batchId = $('#searchBatchId').val() || $('#batchIdDropdown').val();
+                const status = $('#statusFilter').val();
+                const vendor = $('#vendorFilter').val();
+
+                if (!batchId) {
+                    alert('Please enter or select a Batch ID');
+                    return;
+                }
+
+                const searchData = {
+                    batch_id: batchId,
+                    status: status,
+                    vendor: vendor
+                };
+
+                $.ajax({
+                    url: '/api/download/search',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(searchData),
+                    success: function(response) {
+                        displaySearchResults(response.data, searchData);
+                    },
+                    error: function(xhr) {
+                        alert('Error searching batches: ' + (xhr.responseJSON?.error || 'Unknown error'));
+                    }
+                });
+            }
+
+            function displaySearchResults(data, searchParams) {
+                const resultsContainer = $('#searchResults');
+                resultsContainer.empty();
+
+                if (!data || data.length === 0) {
+                    resultsContainer.html('<div class="alert alert-info">No batches found matching your criteria.</div>');
+                    return;
+                }
+
+                let html = '<h4 class="mb-3">Search Results</h4>';
+                
+                data.forEach(function(batch) {
+                    html += `
+                        <div class="batch-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5>${batch.batch_id}</h5>
+                                    <div class="batch-info">
+                                        <p class="mb-1"><strong>Vendor:</strong> ${batch.vendor_name || 'Unknown'}</p>
+                                        <p class="mb-1"><strong>Upload Date:</strong> ${batch.upload_date}</p>
+                                        <p class="mb-1"><strong>Total Images:</strong> ${batch.image_count}</p>
+                                        <p class="mb-1"><strong>Accepted:</strong> ${batch.accepted_count || 0}</p>
+                                        <p class="mb-0"><strong>Rejected:</strong> ${batch.rejected_count || 0}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-success download-btn" 
+                                            data-batch-id="${batch.batch_id}"
+                                            data-upload-date="${batch.upload_date}"
+                                            data-status="${searchParams.status || 'all'}">
+                                        <i class="fas fa-download me-2"></i>Download
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                resultsContainer.html(html);
+
+                // Add click handlers for download buttons
+                $('.download-btn').click(function() {
+                    const batchId = $(this).data('batch-id');
+                    const uploadDate = $(this).data('upload-date');
+                    const status = $(this).data('status');
+                    downloadBatch(batchId, uploadDate, status);
+                });
+            }
+
+            function downloadBatch(batchId, uploadDate, status) {
+                const progressBar = $('#downloadProgress');
+                const progressBarInner = progressBar.find('.progress-bar');
+                
+                // Show progress bar
+                progressBar.show();
+                progressBarInner.css('width', '0%').text('0%');
+
+                // Start download
+                $.ajax({
+                    url: '/api/download/batch',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        batch_id: batchId,
+                        upload_date: uploadDate,
+                        status: status
+                    }),
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(data, textStatus, xhr) {
+                        // Create download link
+                        const blob = new Blob([data], { type: 'application/zip' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        
+                        // Get filename from header
+                        const contentDisposition = xhr.getResponseHeader('Content-Disposition');
+                        let filename = `${batchId}_${status}_images.zip`;
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                            if (filenameMatch) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+                        
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        // Complete progress
+                        progressBarInner.css('width', '100%').text('100%');
+                        setTimeout(() => {
+                            progressBar.hide();
+                        }, 2000);
+                    },
+                    error: function(xhr) {
+                        alert('Error downloading batch: ' + (xhr.responseJSON?.error || 'Unknown error'));
+                        progressBar.hide();
+                    }
+                });
+
+                // Simulate progress (since we can't track actual progress easily)
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    progressBarInner.css('width', progress + '%').text(Math.round(progress) + '%');
+                }, 500);
+
+                // Clear interval when done (handled in success/error callbacks)
+                setTimeout(() => clearInterval(interval), 10000);
+            }
+
+            function clearFilters() {
+                $('#searchBatchId').val('');
+                $('#batchIdDropdown').val('');
+                $('#statusFilter').val('');
+                $('#vendorFilter').val('');
+                $('#searchResults').empty();
+                $('#downloadProgress').hide();
+            }
+
+            // Session check
+            fetch('/check_session', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Session check failed:', error);
+                window.location.href = '/login';
+            });
+        });
+    </script>
+</body>
+</html> 
