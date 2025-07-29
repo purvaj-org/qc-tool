@@ -289,7 +289,7 @@
                                 <option value="partial">Partial</option>
                                 <option value="reupload">Reupload</option>
                             </select>
-                            <input type="file" class="form-control mb-3" id="folder-input" webkitdirectory directory multiple required>
+                            <input type="file" class="form-control mb-3" id="folder-input" webkitdirectory directory multiple accept=".jpg,.jpeg,.png" required>
                             <div class="progress mt-3">
                                 <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"></div>
                                 <div class="progress-text">0%</div>
@@ -382,8 +382,10 @@
                 let uploadMessage = document.getElementById("upload-message");
                 if (this.value.includes("_")) {
                     uploadMessage.textContent = "Bahi Name cannot contain underscores (_).";
+                    uploadMessage.style.color = 'red';
                 } else {
                     uploadMessage.textContent = "";
+                    uploadMessage.style.color = "";
                 }
             });
         });
@@ -396,6 +398,7 @@
 
             if (bahiName.includes("_")) {
                 uploadMessage.textContent = "Bahi Name cannot contain underscores (_).";
+                uploadMessage.style.color = 'red';
                 return;
             }
 
@@ -412,6 +415,25 @@
                 return;
             }
 
+            // Validate file formats - only allow .jpg, .jpeg, and .png
+            let allowedExtensions = ['.jpg', '.jpeg', '.png'];
+            let invalidFiles = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                let fileName = files[i].name.toLowerCase();
+                let isValidFormat = allowedExtensions.some(ext => fileName.endsWith(ext));
+                
+                if (!isValidFormat) {
+                    invalidFiles.push(files[i].name);
+                }
+            }
+            
+            if (invalidFiles.length > 0) {
+                uploadMessage.textContent = `Error: Only .jpg, .jpeg, and .png image formats are allowed. Invalid files: ${invalidFiles.join(', ')}`;
+                uploadMessage.style.color = 'red';
+                return;
+            }
+
             for (let i = 0; i < files.length; i++) {
                 formData.append("files", files[i]);
             }
@@ -420,6 +442,7 @@
             let progressBarFill = document.querySelector(".progress-bar");
             let progressText = document.querySelector(".progress-text");
             uploadMessage.textContent = "";
+            uploadMessage.style.color = "";
 
             progressBar.style.display = "block";
             progressBarFill.style.width = "0%";
