@@ -129,6 +129,44 @@
             transition: width 0.3s ease;
         }
 
+        /* Autocomplete */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 0.375rem 0.375rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .autocomplete-item {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f9fa;
+            font-size: 0.9rem;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.active {
+            background-color: #889E73;
+            color: #fff;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
         /* Results area */
         .results-area {
             margin-top: 2rem;
@@ -244,7 +282,10 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="searchBatchId" class="form-label">Search Batch ID</label>
-                        <input type="text" id="searchBatchId" class="form-control" placeholder="Enter batch ID to search...">
+                        <div class="autocomplete-container">
+                            <input type="text" id="searchBatchId" class="form-control" placeholder="Enter batch ID to search..." autocomplete="off">
+                            <div id="autocompleteResults" class="autocomplete-results"></div>
+                        </div>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="batchIdDropdown" class="form-label">Select Batch ID</label>
@@ -336,6 +377,9 @@
                 const searchValue = $(this).val();
                 if (searchValue) {
                     $('#batchIdDropdown').val('');
+                    showAutocomplete(searchValue);
+                } else {
+                    hideAutocomplete();
                 }
             });
             $('#batchIdDropdown').change(function() {
@@ -348,11 +392,15 @@
             function loadBatchIds() {
                 $.getJSON('/api/download/batch-ids')
                     .done(function(data) {
+                        // Populate dropdown
                         const dropdown = $('#batchIdDropdown');
                         dropdown.empty().append('<option value="">-- Select Batch ID --</option>');
                         data.batch_ids.forEach(function(batchId) {
                             dropdown.append(`<option value="${batchId}">${batchId}</option>`);
                         });
+                        
+                        // Store data for autocomplete
+                        autocompleteData = data.batch_ids;
                     })
                     .fail(function() {
                         console.error('Failed to load batch IDs');
@@ -530,6 +578,91 @@
                 window.downloadInterval = interval;
             }
 
+            // Autocomplete functionality
+            let autocompleteData = [];
+            let selectedIndex = -1;
+
+            function showAutocomplete(searchValue) {
+                if (searchValue.length < 2) {
+                    hideAutocomplete();
+                    return;
+                }
+
+                // Filter batch IDs that match the search
+                const matches = autocompleteData.filter(batchId => 
+                    batchId.toLowerCase().includes(searchValue.toLowerCase())
+                ).slice(0, 10); // Limit to 10 results
+
+                if (matches.length === 0) {
+                    hideAutocomplete();
+                    return;
+                }
+
+                displayAutocompleteResults(matches);
+            }
+
+            function displayAutocompleteResults(matches) {
+                const resultsContainer = $('#autocompleteResults');
+                let html = '';
+                
+                matches.forEach((batchId, index) => {
+                    html += `<div class="autocomplete-item" data-batch-id="${batchId}" data-index="${index}">${batchId}</div>`;
+                });
+                
+                resultsContainer.html(html).show();
+                selectedIndex = -1;
+
+                // Add click handlers
+                $('.autocomplete-item').click(function() {
+                    const batchId = $(this).data('batch-id');
+                    $('#searchBatchId').val(batchId);
+                    hideAutocomplete();
+                });
+            }
+
+            function hideAutocomplete() {
+                $('#autocompleteResults').hide().empty();
+                selectedIndex = -1;
+            }
+
+            // Keyboard navigation for autocomplete
+            $('#searchBatchId').keydown(function(e) {
+                const items = $('.autocomplete-item');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSelection(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateSelection(items);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && items.length > 0) {
+                        const selectedBatchId = $(items[selectedIndex]).data('batch-id');
+                        $('#searchBatchId').val(selectedBatchId);
+                        hideAutocomplete();
+                    }
+                } else if (e.key === 'Escape') {
+                    hideAutocomplete();
+                }
+            });
+
+            function updateSelection(items) {
+                items.removeClass('active');
+                if (selectedIndex >= 0) {
+                    $(items[selectedIndex]).addClass('active');
+                }
+            }
+
+            // Hide autocomplete when clicking outside
+            $(document).click(function(e) {
+                if (!$(e.target).closest('.autocomplete-container').length) {
+                    hideAutocomplete();
+                }
+            });
+
             function clearFilters() {
                 $('#searchBatchId').val('');
                 $('#batchIdDropdown').val('');
@@ -537,6 +670,7 @@
                 $('#vendorFilter').val('');
                 $('#searchResults').empty();
                 $('#downloadProgress').hide();
+                hideAutocomplete();
             }
 
             // Session check

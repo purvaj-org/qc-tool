@@ -244,6 +244,65 @@
             margin-top: 1rem;
         }
 
+        /* Autocomplete dropdown styles */
+        .autocomplete-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #889E73;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            transition: background-color 0.2s ease;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover, .autocomplete-item.highlighted {
+            background-color: #f8f9fa;
+            color: #1a1a1a;
+        }
+
+        .autocomplete-item.highlighted {
+            background-color: #889E73;
+            color: white;
+        }
+
+        .autocomplete-loading {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .autocomplete-no-results {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+
         .custom-footer {
             margin-left: 20vw;
             background-color: #1a1a1a;
@@ -330,7 +389,7 @@
             <!-- Filters and Sorting -->
             <div class="row mb-4 align-items-center">
                 <div class="col-md-6">
-                    <div class="input-group">
+                    <div class="input-group autocomplete-container">
                         <input type="text" class="form-control" id="batch-id-filter" placeholder="Search by Batch ID...">
                         <button class="btn btn-outline-secondary" type="button" id="search-btn">
                             <i class="fas fa-search"></i> Search
@@ -338,6 +397,7 @@
                         <button class="btn btn-outline-secondary" type="button" id="clear-btn">
                             <i class="fas fa-times"></i> Clear
                         </button>
+                        <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -407,6 +467,12 @@
         let currentPage = 1;
         const itemsPerPage = 10;
 
+        // Autocomplete variables
+        let autocompleteTimeout;
+        let currentHighlightIndex = -1;
+        let autocompleteVisible = false;
+        let allBatchIds = [];
+
         // Function to load tasks (with optional filter and sorting)
         function loadTasks(batchIdFilter = '', sortBy = '', sortOrder = '') {
             let endpoint = "/get_qc_tasks";
@@ -444,6 +510,166 @@
                     console.error("Error loading tasks:", err);
                     showErrorMessage("Error loading tasks. Please try again.");
                 });
+        }
+
+        // Autocomplete functions
+        function fetchBatchIdSuggestions(query) {
+            if (query.length < 1) {
+                hideAutocomplete();
+                return;
+            }
+
+            // Show loading state
+            showAutocompleteLoading();
+
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    batch_id: query,
+                    sort_by: 'batch_id',
+                    sort_order: 'asc'
+                })
+            };
+
+            fetch('/get_qc_tasks_filtered', requestOptions)
+                .then(res => res.json())
+                .then(tasks => {
+                    const batchIds = tasks.map(task => task.batch_id);
+                    showAutocompleteSuggestions(batchIds, query);
+                })
+                .catch(err => {
+                    console.error("Error fetching batch ID suggestions:", err);
+                    hideAutocomplete();
+                });
+        }
+
+        function showAutocompleteLoading() {
+            const dropdown = $('#autocomplete-dropdown');
+            dropdown.html('<div class="autocomplete-loading">Searching...</div>');
+            dropdown.show();
+            autocompleteVisible = true;
+        }
+
+        function showAutocompleteSuggestions(batchIds, query) {
+            const dropdown = $('#autocomplete-dropdown');
+            
+            if (batchIds.length === 0) {
+                dropdown.html('<div class="autocomplete-no-results">No matching batch IDs found</div>');
+                dropdown.show();
+                autocompleteVisible = true;
+                currentHighlightIndex = -1;
+                return;
+            }
+
+            let html = '';
+            batchIds.forEach((batchId, index) => {
+                // Highlight matching text
+                const regex = new RegExp(`(${query})`, 'gi');
+                const highlightedText = batchId.replace(regex, '<strong>$1</strong>');
+                html += `<div class="autocomplete-item" data-batch-id="${batchId}" data-index="${index}">${highlightedText}</div>`;
+            });
+
+            dropdown.html(html);
+            dropdown.show();
+            autocompleteVisible = true;
+            currentHighlightIndex = -1;
+
+            // Add click handlers for autocomplete items
+            $('.autocomplete-item').off('click').on('click', function() {
+                const batchId = $(this).data('batch-id');
+                selectAutocompleteSuggestion(batchId);
+            });
+        }
+
+        function selectAutocompleteSuggestion(batchId) {
+            $('#batch-id-filter').val(batchId);
+            hideAutocomplete();
+            
+            // Trigger search with the selected batch ID
+            const { sortBy, sortOrder } = getSortParameters();
+            loadTasks(batchId, sortBy, sortOrder);
+        }
+
+        function hideAutocomplete() {
+            $('#autocomplete-dropdown').hide();
+            autocompleteVisible = false;
+            currentHighlightIndex = -1;
+        }
+
+        function highlightAutocompleteItem(index) {
+            $('.autocomplete-item').removeClass('highlighted');
+            const items = $('.autocomplete-item');
+            
+            if (index >= 0 && index < items.length) {
+                $(items[index]).addClass('highlighted');
+                currentHighlightIndex = index;
+                
+                // Scroll to highlighted item if needed
+                const dropdown = $('#autocomplete-dropdown');
+                const item = $(items[index]);
+                const dropdownTop = dropdown.scrollTop();
+                const dropdownHeight = dropdown.height();
+                const itemTop = item.position().top;
+                const itemHeight = item.outerHeight();
+                
+                if (itemTop < 0) {
+                    dropdown.scrollTop(dropdownTop + itemTop);
+                } else if (itemTop + itemHeight > dropdownHeight) {
+                    dropdown.scrollTop(dropdownTop + itemTop + itemHeight - dropdownHeight);
+                }
+            }
+        }
+
+        function handleAutocompleteKeyNavigation(e) {
+            if (!autocompleteVisible) return false;
+
+            const items = $('.autocomplete-item');
+            
+            switch(e.keyCode) {
+                case 38: // Up arrow
+                    e.preventDefault();
+                    if (currentHighlightIndex > 0) {
+                        highlightAutocompleteItem(currentHighlightIndex - 1);
+                    } else if (currentHighlightIndex === 0) {
+                        highlightAutocompleteItem(-1);
+                    } else {
+                        highlightAutocompleteItem(items.length - 1);
+                    }
+                    return true;
+                    
+                case 40: // Down arrow
+                    e.preventDefault();
+                    if (currentHighlightIndex < items.length - 1) {
+                        highlightAutocompleteItem(currentHighlightIndex + 1);
+                    } else {
+                        highlightAutocompleteItem(0);
+                    }
+                    return true;
+                    
+                case 13: // Enter
+                    e.preventDefault();
+                    if (currentHighlightIndex >= 0 && currentHighlightIndex < items.length) {
+                        const batchId = $(items[currentHighlightIndex]).data('batch-id');
+                        selectAutocompleteSuggestion(batchId);
+                    } else {
+                        // No item highlighted, perform regular search
+                        hideAutocomplete();
+                        const batchIdFilter = $("#batch-id-filter").val().trim();
+                        const { sortBy, sortOrder } = getSortParameters();
+                        loadTasks(batchIdFilter, sortBy, sortOrder);
+                    }
+                    return true;
+                    
+                case 27: // Escape
+                    e.preventDefault();
+                    hideAutocomplete();
+                    return true;
+            }
+            
+            return false;
         }
 
         // Function to render table rows
@@ -633,13 +859,6 @@
                 loadTasks(batchIdFilter, sortBy, sortOrder);
             });
             
-            // Clear button click handler
-            $("#clear-btn").click(function() {
-                $("#batch-id-filter").val('');
-                const { sortBy, sortOrder } = getSortParameters();
-                loadTasks('', sortBy, sortOrder);
-            });
-            
             // Sort button click handler
             $("#sort-btn").click(function() {
                 const batchIdFilter = $("#batch-id-filter").val().trim();
@@ -654,13 +873,62 @@
                 loadTasks(batchIdFilter, sortBy, sortOrder);
             });
             
-            // Enter key handler for search input
+            // Enter key handler for search input (modified for autocomplete)
             $("#batch-id-filter").keypress(function(e) {
                 if (e.which === 13) { // Enter key
-                    const batchIdFilter = $(this).val().trim();
-                    const { sortBy, sortOrder } = getSortParameters();
-                    loadTasks(batchIdFilter, sortBy, sortOrder);
+                    if (!autocompleteVisible) {
+                        const batchIdFilter = $(this).val().trim();
+                        const { sortBy, sortOrder } = getSortParameters();
+                        loadTasks(batchIdFilter, sortBy, sortOrder);
+                    }
+                    // If autocomplete is visible, the keydown handler will handle it
                 }
+            });
+
+            // Autocomplete input keydown handler
+            $("#batch-id-filter").on('keydown', function(e) {
+                if (autocompleteVisible) {
+                    handleAutocompleteKeyNavigation(e);
+                }
+            });
+
+            // Autocomplete input input handler
+            $("#batch-id-filter").on('input', function(e) {
+                const query = $(this).val().trim();
+                clearTimeout(autocompleteTimeout);
+                autocompleteTimeout = setTimeout(() => {
+                    fetchBatchIdSuggestions(query);
+                }, 300); // Debounce time
+            });
+
+            // Hide autocomplete when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.autocomplete-container').length) {
+                    hideAutocomplete();
+                }
+            });
+
+            // Hide autocomplete when input loses focus (with delay to allow clicking on dropdown)
+            $("#batch-id-filter").on('blur', function() {
+                setTimeout(() => {
+                    hideAutocomplete();
+                }, 150);
+            });
+
+            // Show autocomplete when input gains focus (if there's content)
+            $("#batch-id-filter").on('focus', function() {
+                const query = $(this).val().trim();
+                if (query.length >= 1) {
+                    fetchBatchIdSuggestions(query);
+                }
+            });
+
+            // Clear button also hides autocomplete
+            $("#clear-btn").click(function() {
+                hideAutocomplete();
+                $("#batch-id-filter").val('');
+                const { sortBy, sortOrder } = getSortParameters();
+                loadTasks('', sortBy, sortOrder);
             });
         });
 
