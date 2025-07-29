@@ -507,10 +507,6 @@
             .filter-group select, .filter-group input {
                 width: 100%;
             }
-            
-            #batch-search {
-                width: 100% !important;
-            }
         }
 
         @media (max-width: 768px) {
@@ -564,11 +560,6 @@
             .filter-group select, .filter-group input {
                 font-size: 0.8rem;
                 padding: 0.4rem;
-            }
-            
-            #batch-search {
-                font-size: 0.8rem !important;
-                padding: 0.4rem !important;
             }
 
             .stats-box {
@@ -734,8 +725,10 @@
                     </div>
                 </div>
                 <div>
-                    <label for="batch-search">Search Batch ID:</label>
-                    <input type="text" id="batch-search" placeholder="Enter batch ID to search..." style="padding: 0.5rem; border: 1px solid #889E73; border-radius: 4px; font-size: 0.9rem; background-color: #fff; color: #000; width: 200px;">
+                    <label for="batch-select">Select Batch ID:</label>
+                    <select id="batch-select">
+                        <option value="">All Batches</option>
+                    </select>
                 </div>
                 <div>
                     <label for="status-select">Select Status:</label>
@@ -1101,7 +1094,21 @@
                 });
             }
 
+            function updateBatchDropdown(filteredData) {
+                const batchSelect = $('#batch-select');
+                const currentBatch = batchSelect.val();
+                batchSelect.empty();
+                batchSelect.append('<option value="">All Batches</option>');
 
+                const uniqueBatches = [...new Set(filteredData.map(row => row.batch_id))].filter(id => id).sort();
+                uniqueBatches.forEach(batch => {
+                    batchSelect.append(`<option value="${batch}">${batch}</option>`);
+                });
+
+                if (currentBatch && uniqueBatches.includes(currentBatch)) {
+                    batchSelect.val(currentBatch);
+                }
+            }
 
             function updatePagination(totalRows, rowLimit) {
                 const isFull = rowLimit === 'full';
@@ -1175,17 +1182,15 @@
                         filteredData = filteredData.filter(row => row.unique_userid === selectedUser);
                     }
 
-                    if (batchSearchTerm) {
-                        filteredData = filteredData.filter(row => 
-                            row.batch_id && row.batch_id.toLowerCase().includes(batchSearchTerm)
-                        );
+                    if (selectedBatch) {
+                        filteredData = filteredData.filter(row => row.batch_id === selectedBatch);
                     }
 
                     if (selectedStatus) {
                         filteredData = filteredData.filter(row => row.status && row.status.toLowerCase() === selectedStatus.toLowerCase());
                     }
 
-
+                    updateBatchDropdown(filteredData);
 
                     if (sortColumn) {
                         filteredData = sortData([...filteredData], sortColumn, sortDirection);
@@ -1246,7 +1251,7 @@
                 }
 
                 const selectedUser = $('#user-select').val();
-                const batchSearchTerm = $('#batch-search').val().trim().toLowerCase();
+                const selectedBatch = $('#batch-select').val();
                 const selectedStatus = $('#status-select').val();
 
                 if (fromDate && toDate) {
@@ -1264,10 +1269,8 @@
                 if (selectedUser) {
                     filteredData = filteredData.filter(row => row.unique_userid === selectedUser);
                 }
-                if (batchSearchTerm) {
-                    filteredData = filteredData.filter(row => 
-                        row.batch_id && row.batch_id.toLowerCase().includes(batchSearchTerm)
-                    );
+                if (selectedBatch) {
+                    filteredData = filteredData.filter(row => row.batch_id === selectedBatch);
                 }
                 if (selectedStatus) {
                     filteredData = filteredData.filter(row => row.status && row.status.toLowerCase() === selectedStatus.toLowerCase());
@@ -1317,7 +1320,7 @@
                 fetchQCReport();
             });
 
-            $('#batch-search').on('input', function () {
+            $('#batch-select').change(function () {
                 currentPage = 1;
                 fetchQCReport();
             });
