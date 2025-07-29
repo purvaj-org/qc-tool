@@ -57,7 +57,8 @@ def no_cache(f):
 # Database connection function
 def get_db_connection():
     return pymysql.connect(
-        host='192.168.7.97',  # Remove the port from here  
+        host=os.getenv("db_host", "localhost"),
+        port=int(os.getenv("db_port", 3306)),
         user=os.getenv("db_user"),
         password=os.getenv("db_password"),
         database=os.getenv("db_database"), 
@@ -347,6 +348,8 @@ def upload_images():
                         """, (batch_id, filename, upload_timestamp))
                     else:
                         failed_files.append({"file": filename, "error": upload_result["message"]})
+                else:
+                    failed_files.append({"file": filename, "error": "Invalid file format. Only .jpg, .jpeg, and .png files are allowed."})
 
                 upload_progress[session_id] = int((index / total_files) * 100)
 
@@ -781,12 +784,15 @@ def get_qc_tasks():
         return jsonify({"error": "User not logged in"}), 401
 
     session_id = session['user']['unique_userid']
+    sort_by = request.args.get('sort_by', 'upload_date')  # Default sort by upload_date
+    sort_order = request.args.get('sort_order', 'desc')  # Default descending order
     
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT a.batch_id, a.image_count, a.upload_date
+            # Base query
+            base_query = """
+                SELECT a.batch_id, a.image_count, a.upload_date, a.approved_count, a.rejected_count, a.allocation_date
                 FROM allocation_table a
                 WHERE a.unique_userid = %s
                 AND NOT EXISTS (
@@ -795,21 +801,152 @@ def get_qc_tasks():
                     WHERE b.batch_id = a.batch_id
                     AND b.status = 'Completed'
                 )
-            """, (session_id,))
+            """
+            
+            # Add sorting based on parameters
+            valid_sort_fields = {
+                'upload_date': 'a.upload_date',
+                'allocation_date': 'a.allocation_date', 
+                'image_count': 'a.image_count',
+                'batch_id': 'a.batch_id'
+            }
+            
+            if sort_by in valid_sort_fields:
+                sort_field = valid_sort_fields[sort_by]
+                order = 'DESC' if sort_order.lower() == 'desc' else 'ASC'
+                base_query += f" ORDER BY {sort_field} {order}"
+            else:
+                base_query += " ORDER BY a.upload_date DESC"  # Default fallback
+            
+            cursor.execute(base_query, (session_id,))
             tasks = cursor.fetchall()
 
-        # Format upload_date to 'YYYY-MM-DD HH:MM:SS'
+        # Format upload_date and add status information
         formatted_tasks = []
         for task in tasks:
             formatted_task = dict(task)
             if isinstance(formatted_task['upload_date'], datetime.datetime):
                 formatted_task['upload_date'] = formatted_task['upload_date'].strftime('%Y-%m-%d %H:%M:%S')
+            if isinstance(formatted_task.get('allocation_date'), datetime.datetime):
+                formatted_task['allocation_date'] = formatted_task['allocation_date'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Calculate completion status
+            approved_count = formatted_task.get('approved_count', 0) or 0
+            rejected_count = formatted_task.get('rejected_count', 0) or 0
+            total_processed = approved_count + rejected_count
+            image_count = formatted_task.get('image_count', 0) or 0
+            
+            # Determine status based on processing
+            if total_processed == 0:
+                status = 'Pending'
+            elif total_processed < image_count:
+                status = 'In Progress'
+            elif total_processed == image_count:
+                status = 'Completed'
+            else:
+                status = 'Error'
+            
+            formatted_task['status'] = status
+            formatted_task['approved_count'] = approved_count
+            formatted_task['rejected_count'] = rejected_count
             formatted_tasks.append(formatted_task)
 
         return jsonify(formatted_tasks)
     
     except Exception as e:
         print(f"Get QC tasks error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+    finally:
+        conn.close()
+
+@app.route("/get_qc_tasks_filtered", methods=["POST"])
+@no_cache
+def get_qc_tasks_filtered():
+    if "user" not in session:
+        print(f"Get QC tasks filtered accessed without session: {datetime.datetime.now()}")
+        return jsonify({"error": "User not logged in"}), 401
+
+    session_id = session['user']['unique_userid']
+    data = request.get_json()
+    batch_id_filter = data.get('batch_id', '').strip()
+    sort_by = data.get('sort_by', 'upload_date')
+    sort_order = data.get('sort_order', 'desc')
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            base_query = """
+                SELECT a.batch_id, a.image_count, a.upload_date, a.approved_count, a.rejected_count, a.allocation_date
+                FROM allocation_table a
+                WHERE a.unique_userid = %s
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM batch_table b
+                    WHERE b.batch_id = a.batch_id
+                    AND b.status = 'Completed'
+                )
+            """
+            
+            params = [session_id]
+            
+            # Add batch_id filter if provided
+            if batch_id_filter:
+                base_query += " AND a.batch_id LIKE %s"
+                params.append(f"%{batch_id_filter}%")
+            
+            # Add sorting
+            valid_sort_fields = {
+                'upload_date': 'a.upload_date',
+                'allocation_date': 'a.allocation_date', 
+                'image_count': 'a.image_count',
+                'batch_id': 'a.batch_id'
+            }
+            
+            if sort_by in valid_sort_fields:
+                sort_field = valid_sort_fields[sort_by]
+                order = 'DESC' if sort_order.lower() == 'desc' else 'ASC'
+                base_query += f" ORDER BY {sort_field} {order}"
+            else:
+                base_query += " ORDER BY a.upload_date DESC"
+            
+            cursor.execute(base_query, params)
+            tasks = cursor.fetchall()
+
+        # Format upload_date and add status information
+        formatted_tasks = []
+        for task in tasks:
+            formatted_task = dict(task)
+            if isinstance(formatted_task['upload_date'], datetime.datetime):
+                formatted_task['upload_date'] = formatted_task['upload_date'].strftime('%Y-%m-%d %H:%M:%S')
+            if isinstance(formatted_task.get('allocation_date'), datetime.datetime):
+                formatted_task['allocation_date'] = formatted_task['allocation_date'].strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Calculate completion status
+            approved_count = formatted_task.get('approved_count', 0) or 0
+            rejected_count = formatted_task.get('rejected_count', 0) or 0
+            total_processed = approved_count + rejected_count
+            image_count = formatted_task.get('image_count', 0) or 0
+            
+            # Determine status based on processing
+            if total_processed == 0:
+                status = 'Pending'
+            elif total_processed < image_count:
+                status = 'In Progress'
+            elif total_processed == image_count:
+                status = 'Completed'
+            else:
+                status = 'Error'
+            
+            formatted_task['status'] = status
+            formatted_task['approved_count'] = approved_count
+            formatted_task['rejected_count'] = rejected_count
+            formatted_tasks.append(formatted_task)
+
+        return jsonify(formatted_tasks)
+    
+    except Exception as e:
+        print(f"Get QC tasks filtered error: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
     finally:

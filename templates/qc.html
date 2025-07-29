@@ -59,53 +59,113 @@
             line-height: 1.2;
         }
 
-        .folder-card {
+        /* Table Styles */
+        .tasks-table {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
             border: 2px solid #889E73;
-            border-radius: 15px;
-            padding: 1.5rem;
-            text-align: center;
-            transition: transform 0.2s;
-            background-color: #f8f9fa;
-            cursor: pointer;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
         }
 
-        .folder-card:hover {
-            transform: scale(1.03);
-            background-color: #e9ecef;
+        .tasks-table thead {
+            background-color: #889E73;
+            color: white;
         }
 
-        .folder-icon {
-            font-size: clamp(2rem, 5vw, 3rem);
-            color: #889E73;
-        }
-
-        .folder-title {
-            font-size: clamp(1rem, 1.5vw, 1.2rem);
+        .tasks-table thead th {
             font-weight: 600;
-            margin-top: 0.5rem;
+            padding: 1rem 0.75rem;
+            border: none;
+            font-size: 0.9rem;
+        }
+
+        .tasks-table tbody tr {
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .tasks-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .tasks-table tbody td {
+            padding: 0.75rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .batch-id-cell {
+            font-weight: 600;
+            color: #1a1a1a;
+            max-width: 200px;
             word-break: break-word;
         }
 
-        .image-count {
-            font-size: clamp(0.8rem, 1vw, 0.9rem);
-            color: #333;
-            margin: 0.5rem 0;
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .status-progress {
+            background-color: #17a2b8;
+            color: #fff;
+        }
+        
+        .status-completed {
+            background-color: #28a745;
+            color: #fff;
+        }
+        
+        .status-error {
+            background-color: #dc3545;
+            color: #fff;
+        }
+
+        .count-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0 0.2rem;
+        }
+
+        .count-accepted {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+        
+        .count-rejected {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .count-pending {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+            border: 1px solid #6c757d;
         }
 
         .btn-complete {
-            margin-top: 0.5rem;
             background-color: #1C2526;
             border-color: #1C2526;
             color: #FFFFFF;
-            font-size: clamp(0.8rem, 1vw, 0.9rem);
-            padding: 0.5rem 1rem;
-            width: 100%;
-            max-width: 200px;
-            align-self: center;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
         }
 
         .btn-complete:hover {
@@ -114,11 +174,70 @@
             color: #FFFFFF;
         }
 
-        .btn-complete:focus,
-        .btn-complete:active {
-            background-color: #1C2526 !important;
-            border-color: #1C2526 !important;
-            box-shadow: 0 0 0 0.2rem rgba(28, 37, 38, 0.5);
+        .btn-view {
+            background-color: #889E73;
+            border-color: #889E73;
+            color: #FFFFFF;
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            margin-right: 0.5rem;
+        }
+
+        .btn-view:hover {
+            background-color: #7a8a66;
+            border-color: #7a8a66;
+            color: #FFFFFF;
+        }
+
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .pagination-info {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .pagination .page-link {
+            color: #889E73;
+            border-color: #889E73;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #889E73;
+            border-color: #889E73;
+        }
+
+        .pagination .page-link:hover {
+            color: #7a8a66;
+            border-color: #7a8a66;
+        }
+
+        .date-cell {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        #batch-id-filter, #sort-by {
+            border: 2px solid #889E73;
+        }
+
+        #batch-id-filter:focus, #sort-by:focus {
+            border-color: #889E73;
+            box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+        }
+
+        .d-flex.gap-2 {
+            gap: 0.5rem !important;
         }
 
         .alert-message {
@@ -207,9 +326,66 @@
     <div class="content">
         <div class="container mt-4">
             <h2 class="task-heading">Assigned Tasks</h2>
-            <div class="row" id="tasks-container">
-                <!-- Folder cards will be added here -->
+            
+            <!-- Filters and Sorting -->
+            <div class="row mb-4 align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="batch-id-filter" placeholder="Search by Batch ID...">
+                        <button class="btn btn-outline-secondary" type="button" id="search-btn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" id="clear-btn">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select" id="sort-by" style="border: 2px solid #889E73;">
+                            <option value="upload_date">Latest Updated</option>
+                            <option value="upload_date_asc">Oldest Images</option>
+                            <option value="image_count_desc">Highest Image Count</option>
+                            <option value="image_count_asc">Lowest Image Count</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" id="sort-btn">
+                            <i class="fas fa-sort"></i> Sort
+                        </button>
+                    </div>
+                </div>
             </div>
+            
+            <!-- Tasks Table -->
+            <div class="table-responsive">
+                <table class="table tasks-table" id="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>Batch ID</th>
+                            <th>Images</th>
+                            <th>Status</th>
+                            <th>QC Progress</th>
+                            <th>Upload Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasks-tbody">
+                        <!-- Table rows will be added here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <span id="pagination-info">Showing 0 - 0 of 0 tasks</span>
+                </div>
+                <nav aria-label="Tasks pagination">
+                    <ul class="pagination mb-0" id="pagination-controls">
+                        <!-- Pagination buttons will be added here -->
+                    </ul>
+                </nav>
+            </div>
+
             <div id="alert-container" class="alert-message"></div>
         </div>
     </div>
@@ -226,33 +402,266 @@
     </footer>
 
     <script>
-        $(document).ready(function () {
-            fetch("/get_qc_tasks")
+        let allTasks = [];
+        let filteredTasks = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        // Function to load tasks (with optional filter and sorting)
+        function loadTasks(batchIdFilter = '', sortBy = '', sortOrder = '') {
+            let endpoint = "/get_qc_tasks";
+            let requestOptions = {};
+            
+            if (batchIdFilter) {
+                // Use filtered endpoint when there's a batch ID filter
+                endpoint = "/get_qc_tasks_filtered";
+                requestOptions = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        batch_id: batchIdFilter,
+                        sort_by: sortBy,
+                        sort_order: sortOrder
+                    })
+                };
+            } else if (sortBy) {
+                // Use GET endpoint with query parameters for sorting only
+                endpoint = `/get_qc_tasks?sort_by=${sortBy}&sort_order=${sortOrder}`;
+            }
+
+            fetch(endpoint, requestOptions)
                 .then(res => res.json())
                 .then(tasks => {
-                    if (tasks.length === 0) {
-                        $("#tasks-container").html("<p>No tasks assigned.</p>");
-                        return;
-                    }
-
-                    tasks.forEach(task => {
-                        const taskCard = `
-                            <div class="col-md-4 col-lg-3 mb-4">
-                                <div class="folder-card" ondblclick="goToTask('${task.batch_id}', '${task.upload_date}')">
-                                    <div class="folder-icon"><i class="fas fa-folder"></i></div>
-                                    <div class="folder-title">${task.batch_id}</div>
-                                    <div class="image-count">${task.image_count} images</div>
-                                    <button class="btn btn-complete" onclick="markQcTaskAsComplete('${task.batch_id}', '${task.upload_date}')">Mark as Complete</button>
-                                </div>
-                            </div>
-                        `;
-                        $("#tasks-container").append(taskCard);
-                    });
+                    allTasks = tasks;
+                    filteredTasks = tasks;
+                    currentPage = 1;
+                    renderTable();
+                    renderPagination();
                 })
                 .catch(err => {
                     console.error("Error loading tasks:", err);
-                    $("#tasks-container").html("<p>Error loading tasks.</p>");
+                    showErrorMessage("Error loading tasks. Please try again.");
                 });
+        }
+
+        // Function to render table rows
+        function renderTable() {
+            const tbody = $("#tasks-tbody");
+            tbody.empty();
+            
+            if (filteredTasks.length === 0) {
+                tbody.html(`
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-info-circle fa-2x mb-3 text-muted"></i>
+                            <h5>No tasks found</h5>
+                            <p class="text-muted">Try adjusting your search criteria or check back later for new assignments.</p>
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const currentTasks = filteredTasks.slice(startIndex, endIndex);
+
+            currentTasks.forEach(task => {
+                const approvedCount = task.approved_count || 0;
+                const rejectedCount = task.rejected_count || 0;
+                const imageCount = task.image_count || 0;
+                const pendingCount = imageCount - approvedCount - rejectedCount;
+                const status = task.status || 'Pending';
+                
+                // Status badge class
+                let statusClass = 'status-pending';
+                if (status === 'Completed') statusClass = 'status-completed';
+                else if (status === 'In Progress') statusClass = 'status-progress';
+                else if (status === 'Error') statusClass = 'status-error';
+                
+                // Format upload date
+                const uploadDate = formatDate(task.upload_date);
+                
+                const row = `
+                    <tr onclick="goToTask('${task.batch_id}', '${task.upload_date}')">
+                        <td class="batch-id-cell">${task.batch_id}</td>
+                        <td>
+                            <strong>${imageCount}</strong> images
+                        </td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${status}</span>
+                        </td>
+                        <td>
+                            <span class="count-badge count-accepted">✓ ${approvedCount}</span>
+                            <span class="count-badge count-rejected">✗ ${rejectedCount}</span>
+                            <span class="count-badge count-pending">⏳ ${pendingCount}</span>
+                        </td>
+                        <td class="date-cell">${uploadDate}</td>
+                        <td>
+                            <button class="btn btn-view btn-sm" onclick="event.stopPropagation(); goToTask('${task.batch_id}', '${task.upload_date}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-complete btn-sm" onclick="event.stopPropagation(); markQcTaskAsComplete('${task.batch_id}', '${task.upload_date}')">
+                                <i class="fas fa-check"></i> Complete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+
+        // Function to render pagination
+        function renderPagination() {
+            const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+            const startItem = filteredTasks.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+            const endItem = Math.min(currentPage * itemsPerPage, filteredTasks.length);
+            
+            // Update pagination info
+            $("#pagination-info").text(`Showing ${startItem} - ${endItem} of ${filteredTasks.length} tasks`);
+            
+            // Generate pagination controls
+            const paginationControls = $("#pagination-controls");
+            paginationControls.empty();
+            
+            if (totalPages <= 1) return;
+            
+            // Previous button
+            paginationControls.append(`
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+                </li>
+            `);
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    paginationControls.append(`
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                        </li>
+                    `);
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    paginationControls.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+                }
+            }
+            
+            // Next button
+            paginationControls.append(`
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+                </li>
+            `);
+        }
+
+        // Function to change page
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            renderTable();
+            renderPagination();
+        }
+
+        // Function to get sort parameters from dropdown
+        function getSortParameters() {
+            const sortValue = $("#sort-by").val();
+            let sortBy = 'upload_date';
+            let sortOrder = 'desc';
+            
+            switch(sortValue) {
+                case 'upload_date':
+                    sortBy = 'upload_date';
+                    sortOrder = 'desc';
+                    break;
+                case 'upload_date_asc':
+                    sortBy = 'upload_date';
+                    sortOrder = 'asc';
+                    break;
+                case 'image_count_desc':
+                    sortBy = 'image_count';
+                    sortOrder = 'desc';
+                    break;
+                case 'image_count_asc':
+                    sortBy = 'image_count';
+                    sortOrder = 'asc';
+                    break;
+            }
+            
+            return { sortBy, sortOrder };
+        }
+
+        // Helper function to format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric',
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Helper function to show error message
+        function showErrorMessage(message) {
+            $("#tasks-tbody").html(`
+                <tr>
+                    <td colspan="6" class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3 text-danger"></i>
+                        <h5 class="text-danger">Error</h5>
+                        <p class="text-muted">${message}</p>
+                    </td>
+                </tr>
+            `);
+            $("#pagination-info").text("Showing 0 - 0 of 0 tasks");
+            $("#pagination-controls").empty();
+        }
+
+        $(document).ready(function () {
+            // Load tasks on page load
+            loadTasks();
+            
+            // Search button click handler
+            $("#search-btn").click(function() {
+                const batchIdFilter = $("#batch-id-filter").val().trim();
+                const { sortBy, sortOrder } = getSortParameters();
+                loadTasks(batchIdFilter, sortBy, sortOrder);
+            });
+            
+            // Clear button click handler
+            $("#clear-btn").click(function() {
+                $("#batch-id-filter").val('');
+                const { sortBy, sortOrder } = getSortParameters();
+                loadTasks('', sortBy, sortOrder);
+            });
+            
+            // Sort button click handler
+            $("#sort-btn").click(function() {
+                const batchIdFilter = $("#batch-id-filter").val().trim();
+                const { sortBy, sortOrder } = getSortParameters();
+                loadTasks(batchIdFilter, sortBy, sortOrder);
+            });
+            
+            // Sort dropdown change handler
+            $("#sort-by").change(function() {
+                const batchIdFilter = $("#batch-id-filter").val().trim();
+                const { sortBy, sortOrder } = getSortParameters();
+                loadTasks(batchIdFilter, sortBy, sortOrder);
+            });
+            
+            // Enter key handler for search input
+            $("#batch-id-filter").keypress(function(e) {
+                if (e.which === 13) { // Enter key
+                    const batchIdFilter = $(this).val().trim();
+                    const { sortBy, sortOrder } = getSortParameters();
+                    loadTasks(batchIdFilter, sortBy, sortOrder);
+                }
+            });
         });
 
         function goToTask(batchId, uploadDate) {

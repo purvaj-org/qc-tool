@@ -198,6 +198,28 @@
                 -webkit-overflow-scrolling: touch;
             }
         }
+
+        /* Filter styles */
+        .form-control, .form-select {
+            border: 1px solid #889E73;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #7b965c;
+            box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+        }
+
+        #clearFilters {
+            border-color: #889E73;
+            color: #889E73;
+        }
+
+        #clearFilters:hover {
+            background-color: #889E73;
+            border-color: #889E73;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -221,6 +243,44 @@
     <div class="content">
         <div class="container mt-4">
             <h2 class="fw-bold">Ready to Allocate</h2>
+            
+            <!-- Filters Section -->
+            <div class="row mb-3">
+                <div class="col-md-4 mb-2">
+                    <input type="text" id="searchBatchId" class="form-control" placeholder="Search Batch ID...">
+                </div>
+                <div class="col-md-2 mb-2">
+                    <select id="filterLocation" class="form-select">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <select id="filterPandaName" class="form-select">
+                        <option value="">All Panda Names</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <select id="filterUserId" class="form-select">
+                        <option value="">All User IDs</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <select id="filterVendorName" class="form-select">
+                        <option value="">All Vendors</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 mb-2">
+                    <select id="filterUploadType" class="form-select">
+                        <option value="">All Upload Types</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button id="clearFilters" class="btn btn-outline-secondary">Clear Filters</button>
+                </div>
+            </div>
+            
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -275,8 +335,38 @@
                 }
             });
 
+            let allData = [];
+
             // Fetch allocation data
             $.getJSON("/get_ready_to_allocate", function (data) {
+                allData = data;
+                populateFilters(data);
+                renderTable(data);
+                setupEventListeners();
+            });
+
+            function populateFilters(data) {
+                const locations = [...new Set(data.map(row => row.location))].sort();
+                const pandaNames = [...new Set(data.map(row => row.pandas_name))].sort();
+                const userIds = [...new Set(data.map(row => row.unique_userid))].sort();
+                const vendorNames = [...new Set(data.map(row => row.vendor_name))].sort();
+                const uploadTypes = [...new Set(data.map(row => row.upload_type))].sort();
+
+                populateDropdown('#filterLocation', locations);
+                populateDropdown('#filterPandaName', pandaNames);
+                populateDropdown('#filterUserId', userIds);
+                populateDropdown('#filterVendorName', vendorNames);
+                populateDropdown('#filterUploadType', uploadTypes);
+            }
+
+            function populateDropdown(selector, options) {
+                const dropdown = $(selector);
+                options.forEach(option => {
+                    dropdown.append(`<option value="${option}">${option}</option>`);
+                });
+            }
+
+            function renderTable(data) {
                 let tableBody = "";
                 data.forEach(row => {
                     let options = `<select class="qc-user-dropdown"><option value="">Select</option>`;
@@ -285,11 +375,11 @@
                     });
                     options += "</select>";
     
-                    // Format upload_date to "YYYY-MM-DD HH:MM:SS"
                     let formattedUploadDate = row.upload_date ? new Date(row.upload_date).toISOString().slice(0, 19).replace('T', ' ') : '';
     
                     tableBody += `
-                        <tr>
+                        <tr data-batch-id="${row.batch_id}" data-location="${row.location}" data-panda-name="${row.pandas_name}" 
+                            data-user-id="${row.unique_userid}" data-vendor-name="${row.vendor_name}" data-upload-type="${row.upload_type}">
                             <td class="batch-id">${row.batch_id}</td>
                             <td class="upload-date" data-raw="${formattedUploadDate}">${formattedUploadDate}</td>
                             <td>${row.unique_userid}</td>
@@ -306,9 +396,20 @@
                     `;
                 });
                 $("#allocation-table").html(tableBody);
-    
+            }
+
+            function setupEventListeners() {
+                // Search and filter functionality
+                $('#searchBatchId, #filterLocation, #filterPandaName, #filterUserId, #filterVendorName, #filterUploadType').on('input change', filterTable);
+                
+                $('#clearFilters').click(function() {
+                    $('#searchBatchId').val('');
+                    $('#filterLocation, #filterPandaName, #filterUserId, #filterVendorName, #filterUploadType').val('');
+                    filterTable();
+                });
+
                 // Allocate button click
-                $(".allocate-btn").click(function () {
+                $(document).on('click', '.allocate-btn', function () {
                     let $row = $(this).closest("tr");
                     let batchId = $row.find(".batch-id").text().trim();
                     let selectedUser = $row.find(".qc-user-dropdown").val();
@@ -342,7 +443,39 @@
                         alert("Failed to allocate batch.");
                     });
                 });
-            });
+            }
+
+            function filterTable() {
+                const searchTerm = $('#searchBatchId').val().toLowerCase();
+                const locationFilter = $('#filterLocation').val();
+                const pandaNameFilter = $('#filterPandaName').val();
+                const userIdFilter = $('#filterUserId').val();
+                const vendorNameFilter = $('#filterVendorName').val();
+                const uploadTypeFilter = $('#filterUploadType').val();
+
+                $('#allocation-table tr').each(function() {
+                    const $row = $(this);
+                    const batchId = $row.data('batch-id').toString().toLowerCase();
+                    const location = $row.data('location');
+                    const pandaName = $row.data('panda-name');
+                    const userId = $row.data('user-id');
+                    const vendorName = $row.data('vendor-name');
+                    const uploadType = $row.data('upload-type');
+
+                    const matchesSearch = !searchTerm || batchId.includes(searchTerm);
+                    const matchesLocation = !locationFilter || location === locationFilter;
+                    const matchesPandaName = !pandaNameFilter || pandaName === pandaNameFilter;
+                    const matchesUserId = !userIdFilter || userId === userIdFilter;
+                    const matchesVendorName = !vendorNameFilter || vendorName === vendorNameFilter;
+                    const matchesUploadType = !uploadTypeFilter || uploadType === uploadTypeFilter;
+
+                    if (matchesSearch && matchesLocation && matchesPandaName && matchesUserId && matchesVendorName && matchesUploadType) {
+                        $row.show();
+                    } else {
+                        $row.hide();
+                    }
+                });
+            }
         });
 
         // Session check

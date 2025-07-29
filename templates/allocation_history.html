@@ -189,10 +189,26 @@
             }
         }
 
+        /* Filter styles */
+        .form-control, .form-select {
+            border: 1px solid #889E73;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #7b965c;
+            box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+        }
+
         /* Ensure table is scrollable on small screens */
         @media (max-width: 768px) {
             .table-responsive {
                 -webkit-overflow-scrolling: touch;
+            }
+            
+            .row.mb-3 .col-md-3 {
+                margin-bottom: 0.5rem;
             }
         }
     </style>
@@ -218,6 +234,29 @@
     <div class="content">
         <div class="container mt-4">
             <h2 class="fw-bold">Allocation History</h2>
+            
+            <!-- Filters Section -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <input type="text" id="searchBatch" class="form-control" placeholder="Search Batch ID...">
+                </div>
+                <div class="col-md-3">
+                    <select id="filterBatch" class="form-select">
+                        <option value="">All Batch IDs</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="filterStatus" class="form-select">
+                        <option value="">All Statuses</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="filterUser" class="form-select">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+            </div>
+            
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -270,8 +309,37 @@
             }
         });
 
+        // Store original data for filtering
+        let allocationData = [];
+
         // Fetch allocation history
         $.getJSON("/get_allocation_history", function (data) {
+            allocationData = data;
+            populateFilters(data);
+            renderTable(data);
+        });
+
+        // Populate filter dropdowns
+        function populateFilters(data) {
+            const batchIds = [...new Set(data.map(row => row.batch_id))].sort();
+            const statuses = [...new Set(data.map(row => row.status))].sort();
+            const userIds = [...new Set(data.map(row => row.unique_userid))].sort();
+
+            // Populate Batch ID dropdown
+            $("#filterBatch").html('<option value="">All Batch IDs</option>' + 
+                batchIds.map(id => `<option value="${id}">${id}</option>`).join(''));
+
+            // Populate Status dropdown
+            $("#filterStatus").html('<option value="">All Statuses</option>' + 
+                statuses.map(status => `<option value="${status}">${status}</option>`).join(''));
+
+            // Populate User ID dropdown
+            $("#filterUser").html('<option value="">All Users</option>' + 
+                userIds.map(user => `<option value="${user}">${user}</option>`).join(''));
+        }
+
+        // Render table with data
+        function renderTable(data) {
             let tableBody = "";
             data.forEach(row => {
                 const allocationDate = new Date(row.allocation_date).toISOString().slice(0, 19).replace("T", " ");
@@ -297,7 +365,30 @@
                 `;
             });
             $("#history-table").html(tableBody);
+            attachEventHandlers();
+        }
 
+        // Filter function
+        function filterData() {
+            const searchTerm = $("#searchBatch").val().toLowerCase();
+            const batchFilter = $("#filterBatch").val();
+            const statusFilter = $("#filterStatus").val();
+            const userFilter = $("#filterUser").val();
+
+            const filteredData = allocationData.filter(row => {
+                const matchesSearch = row.batch_id.toLowerCase().includes(searchTerm);
+                const matchesBatch = !batchFilter || row.batch_id === batchFilter;
+                const matchesStatus = !statusFilter || row.status === statusFilter;
+                const matchesUser = !userFilter || row.unique_userid === userFilter;
+
+                return matchesSearch && matchesBatch && matchesStatus && matchesUser;
+            });
+
+            renderTable(filteredData);
+        }
+
+        // Attach event handlers to buttons
+        function attachEventHandlers() {
             // Revoke allocation
             $(".btn-action").click(function () {
                 const batchId = $(this).data("batch");
@@ -394,7 +485,11 @@
                     });
                 });
             });
-        });
+        }
+
+        // Add filter event listeners
+        $("#searchBatch").on("input", filterData);
+        $("#filterBatch, #filterStatus, #filterUser").on("change", filterData);
     });
 
     // Session check

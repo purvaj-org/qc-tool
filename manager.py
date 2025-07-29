@@ -21,7 +21,8 @@ manager_bp = Blueprint('manager', __name__)
 # Database connection function
 def get_db_connection():
     return pymysql.connect(
-        host='192.168.7.97',  # Remove the port from here  
+        host='192.168.7.97',
+        port=3306,
         user=os.getenv("db_user"),
         password=os.getenv("db_password"),
         database=os.getenv("db_database"),

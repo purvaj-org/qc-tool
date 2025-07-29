@@ -21,11 +21,24 @@ s3_client = boto3.client(
 
 def upload_to_s3(file, s3_path):
     try:
+        # Reset file pointer to beginning for reliable uploads
+        file.seek(0)
+        
+        # Optimized upload with better configuration
         s3_client.upload_fileobj(
             file,
             SPACES_NAME,
             s3_path,
-            ExtraArgs={'ContentType': file.content_type}
+            ExtraArgs={
+                'ContentType': file.content_type,
+                'StorageClass': 'STANDARD'  # Optimize for frequent access
+            },
+            Config=Config(
+                multipart_threshold=1024 * 25,  # 25MB
+                max_concurrency=10,
+                multipart_chunksize=1024 * 25,
+                use_threads=True
+            )
         )
         return {"success": True}
     except Exception as e:
