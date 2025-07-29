@@ -292,6 +292,48 @@ def get_vendor_data():
     
     return jsonify({"locations": locations, "pandas": pandas})
 
+@app.route("/check_batch_exists", methods=["POST"])
+@no_cache
+def check_batch_exists():
+    """Check if a batch already exists for Complete upload type."""
+    if "user" not in session:
+        return jsonify({"error": "User not logged in"}), 401
+
+    session_id = session['user']['unique_userid']
+    location = request.json.get("location")
+    panda_name = request.json.get("panda_name")
+    bahi_name = request.json.get("bahi_name")
+    record_type = request.json.get("record_type")
+    upload_type = request.json.get("upload_type")
+
+    if not all([location, panda_name, bahi_name, record_type, upload_type]):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # Only check for Complete uploads
+    if upload_type != "complete":
+        return jsonify({"exists": False})
+
+    # Generate batch_id using same logic as upload_images
+    batch_id = f"{session_id}_{location}_{panda_name}_{bahi_name}_{record_type}"
+
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) as count 
+                FROM pandas_upload_table 
+                WHERE batch_id = %s
+            """, (batch_id,))
+            result = cursor.fetchone()
+            exists = result['count'] > 0
+        
+        conn.close()
+        return jsonify({"exists": exists, "batch_id": batch_id})
+
+    except Exception as e:
+        print(f"Check batch exists error: {str(e)}")
+        return jsonify({"error": "Database error"}), 500
+
 @app.route("/upload_images", methods=["POST"])
 @no_cache
 def upload_images():
@@ -2025,6 +2067,7 @@ def download_batch_zip():
     except Exception as e:
         print(f"Error creating batch ZIP: {str(e)}")
         return jsonify({"error": f"Failed to create ZIP file: {str(e)}"}), 500
+
 
 
 if __name__ == "__main__":

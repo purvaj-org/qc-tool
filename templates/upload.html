@@ -448,7 +448,10 @@
                 loading: "Loading...",
                 choose_files: "Choose files",
                 no_file_chosen: "No file chosen",
-                files_selected: "files selected"
+                files_selected: "files selected",
+                // Upload type validation messages
+                batch_already_exists: "This batch has already been uploaded using 'Complete' option. Use 'Partial' for additional uploads or 'Reupload' for corrections.",
+                checking_batch_status: "Checking batch status..."
             },
             hi: {
                 upload: "अपलोड",
@@ -485,7 +488,10 @@
                 loading: "लोड हो रहा है...",
                 choose_files: "फाइलें चुनें",
                 no_file_chosen: "कोई फाइल नहीं चुनी गई",
-                files_selected: "फाइलें चुनी गईं"
+                files_selected: "फाइलें चुनी गईं",
+                // Upload type validation messages
+                batch_already_exists: "यह बैच पहले से ही 'पूर्ण' विकल्प का उपयोग करके अपलोड किया गया है। अतिरिक्त अपलोड के लिए 'आंशिक' या सुधार के लिए 'पुनः अपलोड' का उपयोग करें।",
+                checking_batch_status: "बैच स्थिति जांची जा रही है..."
             }
         };
 
@@ -700,71 +706,154 @@
                 return;
             }
 
-            for (let i = 0; i < files.length; i++) {
-                formData.append("files", files[i]);
+            // Check for batch duplication if upload type is 'complete'
+            let uploadType = document.getElementById("upload-type").value;
+            if (uploadType === "complete") {
+                uploadMessage.textContent = languageManager.getTranslation('checking_batch_status');
+                uploadMessage.style.color = '';
+                
+                checkBatchExists()
+                    .then(exists => {
+                        if (exists) {
+                            uploadMessage.textContent = languageManager.getTranslation('batch_already_exists');
+                            uploadMessage.style.color = 'red';
+                            return;
+                        }
+                        proceedWithUpload();
+                    })
+                    .catch(error => {
+                        console.error('Error checking batch:', error);
+                        uploadMessage.textContent = 'Error checking batch status. Please try again.';
+                        uploadMessage.style.color = 'red';
+                    });
+                return;
             }
 
-            let progressBar = document.querySelector(".progress");
-            let progressBarFill = document.querySelector(".progress-bar");
-            let progressText = document.querySelector(".progress-text");
-            uploadMessage.textContent = "";
-            uploadMessage.style.color = "";
+            proceedWithUpload();
 
-            progressBar.style.display = "block";
-            progressBarFill.style.width = "0%";
-            progressText.textContent = "0%";
-            uploadMessage.textContent = languageManager.getTranslation('uploading_to_server');
+            function checkBatchExists() {
+                return fetch('/check_batch_exists', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        location: document.getElementById("location").value,
+                        panda_name: document.getElementById("panda-name").value,
+                        bahi_name: bahiName,
+                        record_type: document.getElementById("record-type").value,
+                        upload_type: uploadType
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    return data.exists;
+                });
+            }
 
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", "/upload_images", true);
-
-            xhr.upload.onprogress = function (event) {
-                if (event.lengthComputable) {
-                    let percentComplete = Math.round((event.loaded / event.total) * 50);
-                    progressBarFill.style.width = percentComplete + "%";
-                    progressText.textContent = percentComplete + "%";
+            function proceedWithUpload() {
+                for (let i = 0; i < files.length; i++) {
+                    formData.append("files", files[i]);
                 }
-            };
 
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    uploadMessage.textContent = languageManager.getTranslation('processing_on_server');
-                    pollBackendProgress();
-                } else {
+                let progressBar = document.querySelector(".progress");
+                let progressBarFill = document.querySelector(".progress-bar");
+                let progressText = document.querySelector(".progress-text");
+                uploadMessage.textContent = "";
+                uploadMessage.style.color = "";
+
+                progressBar.style.display = "block";
+                progressBarFill.style.width = "0%";
+                progressText.textContent = "0%";
+                uploadMessage.textContent = languageManager.getTranslation('uploading_to_server');
+
+                let xhr = new XMLHttpRequest();
+                xhr.open("POST", "/upload_images", true);
+
+                xhr.upload.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        let percentComplete = Math.round((event.loaded / event.total) * 50);
+                        progressBarFill.style.width = percentComplete + "%";
+                        progressText.textContent = percentComplete + "%";
+                    }
+                };
+
+                xhr.onload = function () {
+                    console.log('Upload response status:', xhr.status);
+                    console.log('Upload response text:', xhr.responseText);
+                    
+                    if (xhr.status === 200) {
+                        let response;
+                        try {
+                            response = JSON.parse(xhr.responseText);
+                            console.log('Upload response JSON:', response);
+                            
+                            // Check if any files actually uploaded successfully
+                            if (response.uploaded_files && response.uploaded_files.length > 0) {
+                                uploadMessage.textContent = languageManager.getTranslation('processing_on_server');
+                                pollBackendProgress();
+                            } else if (response.failed_files && response.failed_files.length > 0) {
+                                // All files failed
+                                progressBar.style.display = "none";
+                                let errorMsg = `Upload failed: ${response.failed_files.length} files failed. `;
+                                if (response.failed_files[0] && response.failed_files[0].error) {
+                                    errorMsg += `Error: ${response.failed_files[0].error}`;
+                                }
+                                uploadMessage.textContent = errorMsg;
+                                uploadMessage.style.color = 'red';
+                                console.error('All files failed to upload:', response.failed_files);
+                            } else {
+                                progressBar.style.display = "none";
+                                uploadMessage.textContent = "Upload completed but no files were processed.";
+                                uploadMessage.style.color = 'orange';
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse response as JSON:', e);
+                            progressBar.style.display = "none";
+                            uploadMessage.textContent = 'Upload response parsing error';
+                            uploadMessage.style.color = 'red';
+                        }
+                    } else {
+                        progressBar.style.display = "none";
+                        uploadMessage.textContent = languageManager.getTranslation('upload_failed') + " " + xhr.responseText;
+                        uploadMessage.style.color = 'red';
+                        console.error('Upload failed with status:', xhr.status, 'Response:', xhr.responseText);
+                    }
+                };
+
+                xhr.onerror = function () {
                     progressBar.style.display = "none";
-                    uploadMessage.textContent = languageManager.getTranslation('upload_failed') + " " + xhr.responseText;
-                }
-            };
+                    uploadMessage.textContent = languageManager.getTranslation('upload_failed_network');
+                };
 
-            xhr.onerror = function () {
-                progressBar.style.display = "none";
-                uploadMessage.textContent = languageManager.getTranslation('upload_failed_network');
-            };
+                xhr.send(formData);
 
-            xhr.send(formData);
+                function pollBackendProgress() {
+                    let interval = setInterval(() => {
+                        fetch("/upload_progress")
+                            .then(response => response.json())
+                            .then(data => {
+                                let backendProgress = Math.min(data.progress, 100);
+                                let totalProgress = 50 + (backendProgress * 0.5);
+                                progressBarFill.style.width = totalProgress + "%";
+                                progressText.textContent = Math.round(totalProgress) + "%";
 
-            function pollBackendProgress() {
-                let interval = setInterval(() => {
-                    fetch("/upload_progress")
-                        .then(response => response.json())
-                        .then(data => {
-                            let backendProgress = Math.min(data.progress, 100);
-                            let totalProgress = 50 + (backendProgress * 0.5);
-                            progressBarFill.style.width = totalProgress + "%";
-                            progressText.textContent = Math.round(totalProgress) + "%";
-
-                            if (backendProgress === 100) {
+                                if (backendProgress === 100) {
+                                    clearInterval(interval);
+                                    progressBar.style.display = "none";
+                                    uploadMessage.textContent = languageManager.getTranslation('upload_successful');
+                                }
+                            })
+                            .catch(error => {
                                 clearInterval(interval);
                                 progressBar.style.display = "none";
-                                uploadMessage.textContent = languageManager.getTranslation('upload_successful');
-                            }
-                        })
-                        .catch(error => {
-                            clearInterval(interval);
-                            progressBar.style.display = "none";
-                            uploadMessage.textContent = languageManager.getTranslation('error_checking_progress') + " " + error;
-                        });
-                }, 500);
+                                uploadMessage.textContent = languageManager.getTranslation('error_checking_progress') + " " + error;
+                            });
+                    }, 500);
+                }
             }
         });
 

@@ -414,7 +414,7 @@
             document.getElementById("session-id").textContent = sessionID;
 
             if (sessionID !== "Not Set") {
-                fetch(`/get_upload_history?unique_userid=${sessionID}`)
+                fetch('/get_upload_history')
                     .then(response => response.json())
                     .then(data => {
                         let tableBody = document.getElementById("history-table-body");
