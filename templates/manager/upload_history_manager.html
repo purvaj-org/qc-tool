@@ -42,6 +42,84 @@
         }
         .search-form .form-label { font-weight: 600; }
         #history-table { margin-top: 2rem; }
+        
+        /* Batch Details Modal Styles */
+        .batch-link {
+            color: #0066cc;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .batch-link:hover {
+            color: #004499;
+        }
+        .modal-xl {
+            max-width: 90%;
+        }
+        .batch-details-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .image-gallery {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: white;
+        }
+        .image-thumbnail {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin: 5px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .image-thumbnail:hover {
+            border-color: #0066cc;
+        }
+        .image-thumbnail.selected {
+            border-color: #0066cc;
+            box-shadow: 0 0 10px rgba(0, 102, 204, 0.3);
+        }
+        .image-viewer {
+            text-align: center;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: white;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .main-image {
+            max-width: 100%;
+            max-height: 350px;
+            border-radius: 4px;
+        }
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .security-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: 1000;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -122,11 +200,241 @@
                     Please use the filters above to search for upload history.
                 </div>
             </div>
-
         </div>
     </div>
 
+    <!-- Batch Details Modal -->
+    <div class="modal fade" id="batchDetailsModal" tabindex="-1" aria-labelledby="batchDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="batchDetailsModalLabel">Batch Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Batch Information -->
+                        <div class="col-md-4">
+                            <div class="batch-details-section">
+                                <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Batch Information</h6>
+                                <div id="batch-info">
+                                    <div class="mb-2"><strong>Batch ID:</strong> <span id="detail-batch-id"></span></div>
+                                    <div class="mb-2"><strong>Vendor:</strong> <span id="detail-vendor"></span></div>
+                                    <div class="mb-2"><strong>Location:</strong> <span id="detail-location"></span></div>
+                                    <div class="mb-2"><strong>Pandas Name:</strong> <span id="detail-pandas"></span></div>
+                                    <div class="mb-2"><strong>Bahi Name:</strong> <span id="detail-bahi"></span></div>
+                                    <div class="mb-2"><strong>Upload Date:</strong> <span id="detail-upload-date"></span></div>
+                                    <div class="mb-2"><strong>Uploaded By:</strong> <span id="detail-uploaded-by"></span></div>
+                                    <div class="mb-2"><strong>Total Images:</strong> <span id="detail-image-count"></span></div>
+                                    <div class="mb-3"><strong>Status:</strong> <span id="detail-status"></span></div>
+                                    <button id="export-batch-btn" class="btn btn-success btn-sm w-100">
+                                        <i class="fas fa-download me-2"></i>Export Batch Details
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Image Thumbnails -->
+                            <div class="batch-details-section">
+                                <h6 class="mb-3"><i class="fas fa-images me-2"></i>Images (<span id="thumbnail-count">0</span>)</h6>
+                                <div id="image-thumbnails" class="image-gallery"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Image Viewer -->
+                        <div class="col-md-8">
+                            <div class="batch-details-section">
+                                <h6 class="mb-3"><i class="fas fa-eye me-2"></i>Image Viewer</h6>
+                                <div id="image-viewer" class="image-viewer no-select">
+                                    <div class="text-muted">Select an image to preview</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Security measures
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.closest('#batchDetailsModal')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if ((e.key === 'F12') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+                (e.ctrlKey && e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Batch Details Manager
+        class BatchDetailsManager {
+            constructor() {
+                this.modal = new bootstrap.Modal(document.getElementById('batchDetailsModal'));
+                this.currentBatchId = null;
+                this.currentImages = [];
+                this.bindEvents();
+            }
+
+            bindEvents() {
+                document.getElementById('export-batch-btn').addEventListener('click', () => {
+                    this.exportBatchDetails();
+                });
+            }
+
+            async openBatchDetails(batchId) {
+                this.currentBatchId = batchId;
+                
+                try {
+                    const response = await fetch(`/api/manager/batch/${batchId}/details`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.renderBatchInfo(data.batch);
+                        await this.loadBatchImages(batchId);
+                        this.modal.show();
+                    } else {
+                        alert('Failed to load batch details: ' + data.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading batch details:', error);
+                    alert('Failed to load batch details');
+                }
+            }
+
+            renderBatchInfo(batch) {
+                document.getElementById('detail-batch-id').textContent = batch.batch_id;
+                document.getElementById('detail-vendor').textContent = batch.vendor_name || 'N/A';
+                document.getElementById('detail-location').textContent = batch.location || 'N/A';
+                document.getElementById('detail-pandas').textContent = batch.pandas_name || 'N/A';
+                document.getElementById('detail-bahi').textContent = batch.bahi_name || 'N/A';
+                document.getElementById('detail-upload-date').textContent = 
+                    new Date(batch.upload_date).toLocaleDateString();
+                document.getElementById('detail-uploaded-by').textContent = batch.uploaded_by || 'N/A';
+                document.getElementById('detail-image-count').textContent = batch.image_count || 0;
+                document.getElementById('detail-status').textContent = batch.status || 'N/A';
+            }
+
+            async loadBatchImages(batchId) {
+                try {
+                    const response = await fetch(`/api/manager/batch/${batchId}/images`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.currentImages = data.images;
+                        this.renderImageThumbnails();
+                        document.getElementById('thumbnail-count').textContent = this.currentImages.length;
+                    } else {
+                        console.error('Failed to load images:', data.error);
+                        document.getElementById('image-thumbnails').innerHTML = 
+                            '<div class="text-muted">Failed to load images</div>';
+                    }
+                } catch (error) {
+                    console.error('Error loading images:', error);
+                    document.getElementById('image-thumbnails').innerHTML = 
+                        '<div class="text-muted">Error loading images</div>';
+                }
+            }
+
+            renderImageThumbnails() {
+                const container = document.getElementById('image-thumbnails');
+                container.innerHTML = '';
+
+                if (this.currentImages.length === 0) {
+                    container.innerHTML = '<div class="text-muted">No images found</div>';
+                    return;
+                }
+
+                this.currentImages.forEach((image, index) => {
+                    const img = document.createElement('img');
+                    img.src = image.thumbnail_url;
+                    img.className = 'image-thumbnail no-select';
+                    img.alt = `Image ${index + 1}`;
+                    img.dataset.index = index;
+                    img.draggable = false;
+                    
+                    img.addEventListener('click', () => {
+                        this.selectImage(index);
+                    });
+                    
+                    img.addEventListener('error', () => {
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZjhmOWZhIi8+CjxwYXRoIGQ9Ik02MCA0MEw0MCA4MEg4MEw2MCA0MFoiIGZpbGw9IiNkZWUyZTYiLz4KPHN2Zz4K';
+                    });
+                    
+                    container.appendChild(img);
+                });
+            }
+
+            selectImage(index) {
+                // Remove previous selection
+                document.querySelectorAll('.image-thumbnail').forEach(img => {
+                    img.classList.remove('selected');
+                });
+                
+                // Add selection to current image
+                const selectedThumbnail = document.querySelector(`[data-index="${index}"]`);
+                if (selectedThumbnail) {
+                    selectedThumbnail.classList.add('selected');
+                }
+                
+                // Display full image
+                const viewer = document.getElementById('image-viewer');
+                const image = this.currentImages[index];
+                
+                viewer.innerHTML = `
+                    <div class="position-relative">
+                        <img src="${image.full_url}" 
+                             class="main-image no-select" 
+                             alt="Image ${index + 1}"
+                             draggable="false"
+                             oncontextmenu="return false;"
+                             onload="this.style.opacity='1'"
+                             style="opacity:0; transition: opacity 0.3s;">
+                        <div class="security-overlay"></div>
+                    </div>
+                `;
+            }
+
+            async exportBatchDetails() {
+                if (!this.currentBatchId) return;
+                
+                try {
+                    const response = await fetch(`/api/manager/batch/${this.currentBatchId}/export`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (!response.ok) throw new Error('Export failed');
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `batch_${this.currentBatchId}_details.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (error) {
+                    console.error('Export error:', error);
+                    alert('Failed to export batch details');
+                }
+            }
+        }
+
+        // Initialize batch details manager
+        const batchDetailsManager = new BatchDetailsManager();
+
         document.addEventListener('DOMContentLoaded', function() {
             const vendorSelect = document.getElementById('vendor-select');
             const locationSelect = document.getElementById('location-select');
@@ -179,6 +487,7 @@
             locationSelect.addEventListener('change', () => {
                 updatePandas(vendorSelect.value, locationSelect.value);
             });
+            
             const exportBtn = document.getElementById('export-btn');
             let currentPage = 1;
 
@@ -230,7 +539,7 @@
                             tr.innerHTML = `
                                 <td>${row.vendor_name || 'N/A'}</td>
                                 <td>${new Date(row.upload_date).toLocaleDateString()}</td>
-                                <td>${row.batch_id}</td>
+                                <td><span class="batch-link" onclick="batchDetailsManager.openBatchDetails('${row.batch_id}')">${row.batch_id}</span></td>
                                 <td>${row.location}</td>
                                 <td>${row.pandas_name}</td>
                                 <td>${row.bahi_name}</td>
@@ -240,7 +549,7 @@
                         });
                     } else {
                         noResultsMsg.innerHTML = data.error ? `Error: ${data.error}` : 'No results found for the selected criteria.';
-                    noResultsMsg.className = 'alert alert-warning text-center';
+                        noResultsMsg.className = 'alert alert-warning text-center';
                         noResultsMsg.classList.remove('d-none');
                     }
                     renderPagination(data.total_pages, data.current_page, data.total_records, data.total_images);
@@ -269,7 +578,8 @@
                 paginationControls.innerHTML = '';
                 resultsCount.innerHTML = '';
             });
-        // Export handler
+
+            // Export handler
             exportBtn.addEventListener('click', function() {
                 const payload = {
                     vendor_id: vendorSelect.value,
@@ -301,72 +611,72 @@
                 .catch(err => alert(err.message));
             });
 
-        function renderPagination(totalPages, currentPage, totalRecords, totalImages) {
-            paginationControls.innerHTML = '';
-            resultsCount.innerHTML = '';
-            if (totalRecords === 0) return;
+            function renderPagination(totalPages, currentPage, totalRecords, totalImages) {
+                paginationControls.innerHTML = '';
+                resultsCount.innerHTML = '';
+                if (totalRecords === 0) return;
 
-            const perPage = 12;
-            const startRecord = (currentPage - 1) * perPage + 1;
-            const endRecord = Math.min(startRecord + perPage - 1, totalRecords);
-            resultsCount.innerText = `Showing ${startRecord}-${endRecord} of ${totalRecords} records (Total Images: ${totalImages})`;
+                const perPage = 12;
+                const startRecord = (currentPage - 1) * perPage + 1;
+                const endRecord = Math.min(startRecord + perPage - 1, totalRecords);
+                resultsCount.innerText = `Showing ${startRecord}-${endRecord} of ${totalRecords} records (Total Images: ${totalImages})`;
 
-            if (totalPages <= 1) return;
+                if (totalPages <= 1) return;
 
-            const ul = document.createElement('ul');
-            ul.className = 'pagination';
+                const ul = document.createElement('ul');
+                ul.className = 'pagination';
 
-            const createPageItem = (page, text, disabled = false, active = false) => {
-                const li = document.createElement('li');
-                li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
-                const link = document.createElement('a');
-                link.className = 'page-link';
-                link.href = '#';
-                link.innerHTML = text;
-                if (!disabled) {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        performSearch(page);
-                    });
+                const createPageItem = (page, text, disabled = false, active = false) => {
+                    const li = document.createElement('li');
+                    li.className = `page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}`;
+                    const link = document.createElement('a');
+                    link.className = 'page-link';
+                    link.href = '#';
+                    link.innerHTML = text;
+                    if (!disabled) {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            performSearch(page);
+                        });
+                    }
+                    li.appendChild(link);
+                    return li;
+                };
+
+                ul.appendChild(createPageItem(currentPage - 1, '«', currentPage === 1));
+
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, currentPage + 2);
+
+                if (currentPage - 1 <= 2) {
+                    endPage = Math.min(totalPages, 5);
                 }
-                li.appendChild(link);
-                return li;
-            };
-
-            ul.appendChild(createPageItem(currentPage - 1, '«', currentPage === 1));
-
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, currentPage + 2);
-
-            if (currentPage - 1 <= 2) {
-                endPage = Math.min(totalPages, 5);
-            }
-            if (totalPages - currentPage <= 2) {
-                startPage = Math.max(1, totalPages - 4);
-            }
-
-            if (startPage > 1) {
-                ul.appendChild(createPageItem(1, '1'));
-                if (startPage > 2) {
-                    ul.appendChild(createPageItem(0, '...', true));
+                if (totalPages - currentPage <= 2) {
+                    startPage = Math.max(1, totalPages - 4);
                 }
-            }
 
-            for (let i = startPage; i <= endPage; i++) {
-                ul.appendChild(createPageItem(i, i, false, i === currentPage));
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    ul.appendChild(createPageItem(0, '...', true));
+                if (startPage > 1) {
+                    ul.appendChild(createPageItem(1, '1'));
+                    if (startPage > 2) {
+                        ul.appendChild(createPageItem(0, '...', true));
+                    }
                 }
-                ul.appendChild(createPageItem(totalPages, totalPages));
+
+                for (let i = startPage; i <= endPage; i++) {
+                    ul.appendChild(createPageItem(i, i, false, i === currentPage));
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        ul.appendChild(createPageItem(0, '...', true));
+                    }
+                    ul.appendChild(createPageItem(totalPages, totalPages));
+                }
+
+                ul.appendChild(createPageItem(currentPage + 1, '»', currentPage === totalPages));
+
+                paginationControls.appendChild(ul);
             }
-
-            ul.appendChild(createPageItem(currentPage + 1, '»', currentPage === totalPages));
-
-            paginationControls.appendChild(ul);
-        }
         });
     </script>
 </body>
