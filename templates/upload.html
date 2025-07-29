@@ -20,6 +20,32 @@
             margin: 0;
         }
 
+        /* Language Toggle */
+        .language-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1200;
+            background: #1a1a1a;
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .language-toggle:hover {
+            background: #333;
+            transform: translateY(-1px);
+        }
+
+        .language-toggle i {
+            margin-right: 5px;
+        }
+
         /* Sidebar */
         .sidebar {
             height: 100vh;
@@ -143,6 +169,41 @@
             padding: 10px 0;
         }
 
+        /* File Input Styling */
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 0.375rem 0.75rem;
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .file-input-label:hover {
+            border-color: #86b7fe;
+        }
+
+        .file-selected {
+            color: #495057;
+        }
+
+        .file-placeholder {
+            color: #6c757d;
+        }
+
         /* Buttons */
         .btn-dark-custom {
             background-color: #1a1a1a;
@@ -158,6 +219,13 @@
 
         /* Responsive Styles */
         @media (max-width: 768px) {
+            .language-toggle {
+                top: 15px;
+                right: 15px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+
             .sidebar {
                 transform: translateX(-100%);
                 width: 200px;
@@ -209,6 +277,13 @@
         }
 
         @media (max-width: 576px) {
+            .language-toggle {
+                top: 10px;
+                right: 10px;
+                padding: 5px 10px;
+                font-size: 0.75rem;
+            }
+
             .sidebar {
                 width: 180px;
             }
@@ -242,6 +317,12 @@
     </style>
 </head>
 <body>
+    <!-- Language Toggle Button -->
+    <button class="language-toggle" id="languageToggle">
+        <i class="fas fa-language"></i>
+        <span id="currentLang">हिंदी</span>
+    </button>
+
     <!-- Hamburger Menu -->
     <div class="hamburger">
         <i class="fas fa-bars"></i>
@@ -252,9 +333,18 @@
         <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
              alt="Purvaj.com Logo" 
              class="logo-img">
-        <a href="/upload" class="active"><i class="fas fa-upload me-2"></i>Upload</a>
-        <a href="/upload_history" id="history-link"><i class="fas fa-history me-2"></i>Upload History</a>
-        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+        <a href="/upload" class="active">
+            <i class="fas fa-upload me-2"></i>
+            <span data-translate="upload">Upload</span>
+        </a>
+        <a href="/upload_history" id="history-link">
+            <i class="fas fa-history me-2"></i>
+            <span data-translate="upload_history">Upload History</span>
+        </a>
+        <a href="/logout">
+            <i class="fas fa-sign-out-alt me-2"></i>
+            <span data-translate="logout">Logout</span>
+        </a>
     </div>
 
     <!-- Content -->
@@ -262,39 +352,44 @@
         <div class="container min-vh-100 d-flex align-items-center">
             <div class="row w-100">
                 <div class="col-md-6 d-flex flex-column justify-content-center">
-                    <h2 class="fw-bold mb-3">Upload Batches</h2>
-                    <p class="text-muted">Select your files and upload them.</p>
-                    <p><strong>User ID:</strong> <span id="session-id">Loading...</span></p>
+                    <h2 class="fw-bold mb-3" data-translate="upload_batches">Upload Batches</h2>
+                    <p class="text-muted" data-translate="select_files_desc">Select your files and upload them.</p>
+                    <p><strong data-translate="user_id">User ID:</strong> <span id="session-id">Loading...</span></p>
                 </div>
                 <div class="col-md-6 d-flex justify-content-center">
                     <div class="upload-card">
-                        <h2 class="text-center mb-4">Upload</h2>
+                        <h2 class="text-center mb-4" data-translate="upload">Upload</h2>
                         <form id="upload-form">
                             <select class="form-select mb-3" id="location" required>
-                                <option value="" disabled selected>Select Location</option>
+                                <option value="" disabled selected data-translate="select_location">Select Location</option>
                             </select>
                             <select class="form-select mb-3" id="panda-name" required>
-                                <option value="" disabled selected>Select Panda Name</option>
+                                <option value="" disabled selected data-translate="select_panda_name">Select Panda Name</option>
                             </select>
-                            <input type="text" class="form-control mb-3" id="bahi-name" placeholder="Enter Bahi Name" required>
+                            <input type="text" class="form-control mb-3" id="bahi-name" data-translate-placeholder="enter_bahi_name" placeholder="Enter Bahi Name" required>
                             <select class="form-select mb-3" id="record-type" required>
-                                <option value="" disabled selected>Select Record Type</option>
-                                <option value="Cover">Cover</option>
-                                <option value="Suchi">Suchi</option>
-                                <option value="Record">Record</option>
+                                <option value="" disabled selected data-translate="select_record_type">Select Record Type</option>
+                                <option value="Cover" data-translate="cover">Cover</option>
+                                <option value="Suchi" data-translate="suchi">Suchi</option>
+                                <option value="Record" data-translate="record">Record</option>
                             </select>
                             <select class="form-select mb-3" id="upload-type" required>
-                                <option value="" disabled selected>Select Upload Type</option>
-                                <option value="complete">Complete</option>
-                                <option value="partial">Partial</option>
-                                <option value="reupload">Reupload</option>
+                                <option value="" disabled selected data-translate="select_upload_type">Select Upload Type</option>
+                                <option value="complete" data-translate="complete">Complete</option>
+                                <option value="partial" data-translate="partial">Partial</option>
+                                <option value="reupload" data-translate="reupload">Reupload</option>
                             </select>
-                            <input type="file" class="form-control mb-3" id="folder-input" webkitdirectory directory multiple accept=".jpg,.jpeg,.png" required>
+                            <div class="file-input-wrapper mb-3">
+                                <input type="file" id="folder-input" webkitdirectory directory multiple accept=".jpg,.jpeg,.png" required>
+                                <label for="folder-input" class="file-input-label" id="file-input-label">
+                                    <span data-translate="choose_files" class="file-placeholder">Choose files</span>
+                                </label>
+                            </div>
                             <div class="progress mt-3">
                                 <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"></div>
                                 <div class="progress-text">0%</div>
                             </div>
-                            <button type="submit" class="btn btn-dark-custom w-100 mt-3">Upload</button>
+                            <button type="submit" class="btn btn-dark-custom w-100 mt-3" data-translate="upload">Upload</button>
                         </form>
                         <p id="upload-message" class="mt-3 text-center"></p>
                     </div>
@@ -306,16 +401,187 @@
     <!-- Footer -->
     <footer class="custom-footer">
         <div class="container d-flex justify-content-between align-items-center">
-            <span>© 2025 Purvaj</span>
+            <span data-translate="copyright">© 2025 Purvaj</span>
             <div>
-                <a href="/about" class="me-3">About</a>
-                <a href="/contact" class="me-3">Contact</a>
-                <a href="/privacy">Privacy</a>
+                <a href="/about" class="me-3" data-translate="about">About</a>
+                <a href="/contact" class="me-3" data-translate="contact">Contact</a>
+                <a href="/privacy" data-translate="privacy">Privacy</a>
             </div>
         </div>
     </footer>
 
     <script>
+        // Translation System
+        const translations = {
+            en: {
+                upload: "Upload",
+                upload_history: "Upload History",
+                logout: "Logout",
+                upload_batches: "Upload Batches",
+                select_files_desc: "Select your files and upload them.",
+                user_id: "User ID:",
+                select_location: "Select Location",
+                select_panda_name: "Select Panda Name",
+                enter_bahi_name: "Enter Bahi Name",
+                select_record_type: "Select Record Type",
+                cover: "Cover",
+                suchi: "Suchi",
+                record: "Record",
+                select_upload_type: "Select Upload Type",
+                complete: "Complete",
+                partial: "Partial",
+                reupload: "Reupload",
+                copyright: "© 2025 Purvaj",
+                about: "About",
+                contact: "Contact",
+                privacy: "Privacy",
+                // Progress and error messages
+                uploading_to_server: "Uploading to server...",
+                processing_on_server: "Processing on server...",
+                upload_successful: "Upload successful!",
+                upload_failed: "Upload failed:",
+                upload_failed_network: "Upload failed due to a network error.",
+                error_checking_progress: "Error checking progress:",
+                bahi_name_underscore_error: "Bahi Name cannot contain underscores (_).",
+                select_files_error: "Please select files to upload.",
+                invalid_file_format: "Error: Only .jpg, .jpeg, and .png image formats are allowed. Invalid files:",
+                loading: "Loading...",
+                choose_files: "Choose files",
+                no_file_chosen: "No file chosen",
+                files_selected: "files selected"
+            },
+            hi: {
+                upload: "अपलोड",
+                upload_history: "अपलोड इतिहास",
+                logout: "लॉगआउट",
+                upload_batches: "बैच अपलोड करें",
+                select_files_desc: "अपनी फाइलें चुनें और उन्हें अपलोड करें।",
+                user_id: "उपयोगकर्ता आईडी:",
+                select_location: "स्थान चुनें",
+                select_panda_name: "पांडा नाम चुनें",
+                enter_bahi_name: "बही नाम दर्ज करें",
+                select_record_type: "रिकॉर्ड प्रकार चुनें",
+                cover: "कवर",
+                suchi: "सूची",
+                record: "रिकॉर्ड",
+                select_upload_type: "अपलोड प्रकार चुनें",
+                complete: "पूर्ण",
+                partial: "आंशिक",
+                reupload: "पुनः अपलोड",
+                copyright: "© 2025 पूर्वज",
+                about: "हमारे बारे में",
+                contact: "संपर्क",
+                privacy: "गोपनीयता",
+                // Progress and error messages
+                uploading_to_server: "सर्वर पर अपलोड हो रहा है...",
+                processing_on_server: "सर्वर पर प्रोसेसिंग हो रही है...",
+                upload_successful: "अपलोड सफल!",
+                upload_failed: "अपलोड असफल:",
+                upload_failed_network: "नेटवर्क त्रुटि के कारण अपलोड असफल।",
+                error_checking_progress: "प्रगति जांचने में त्रुटि:",
+                bahi_name_underscore_error: "बही नाम में अंडरस्कोर (_) नहीं हो सकते।",
+                select_files_error: "कृपया अपलोड करने के लिए फाइलें चुनें।",
+                invalid_file_format: "त्रुटि: केवल .jpg, .jpeg, और .png छवि प्रारूपों की अनुमति है। अमान्य फाइलें:",
+                loading: "लोड हो रहा है...",
+                choose_files: "फाइलें चुनें",
+                no_file_chosen: "कोई फाइल नहीं चुनी गई",
+                files_selected: "फाइलें चुनी गईं"
+            }
+        };
+
+        // Language Management
+        class LanguageManager {
+            constructor() {
+                this.currentLanguage = localStorage.getItem('language') || 'en';
+                this.init();
+            }
+
+            init() {
+                this.updateLanguageToggle();
+                this.translatePage();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('languageToggle').addEventListener('click', () => {
+                    this.toggleLanguage();
+                });
+            }
+
+            toggleLanguage() {
+                this.currentLanguage = this.currentLanguage === 'en' ? 'hi' : 'en';
+                localStorage.setItem('language', this.currentLanguage);
+                this.updateLanguageToggle();
+                this.translatePage();
+            }
+
+            updateLanguageToggle() {
+                const toggleButton = document.getElementById('currentLang');
+                toggleButton.textContent = this.currentLanguage === 'en' ? 'हिंदी' : 'English';
+            }
+
+            translatePage() {
+                const elements = document.querySelectorAll('[data-translate]');
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-translate');
+                    if (translations[this.currentLanguage][key]) {
+                        element.textContent = translations[this.currentLanguage][key];
+                    }
+                });
+
+                // Handle placeholders
+                const placeholderElements = document.querySelectorAll('[data-translate-placeholder]');
+                placeholderElements.forEach(element => {
+                    const key = element.getAttribute('data-translate-placeholder');
+                    if (translations[this.currentLanguage][key]) {
+                        element.placeholder = translations[this.currentLanguage][key];
+                    }
+                });
+
+                // Update file input text
+                const fileInput = document.getElementById('folder-input');
+                const fileLabel = document.getElementById('file-input-label');
+                if (fileInput && fileLabel) {
+                    const span = fileLabel.querySelector('span');
+                    if (span && fileInput.files.length === 0) {
+                        span.textContent = this.getTranslation('choose_files');
+                    }
+                }
+
+                // Update document title and language attribute
+                document.documentElement.lang = this.currentLanguage;
+                document.title = this.currentLanguage === 'hi' ? 'अपलोड पेज' : 'Upload Page';
+            }
+
+            getTranslation(key) {
+                return translations[this.currentLanguage][key] || key;
+            }
+        }
+
+        // Initialize Language Manager
+        const languageManager = new LanguageManager();
+
+        // File Input Handler
+        document.addEventListener("DOMContentLoaded", function() {
+            const fileInput = document.getElementById('folder-input');
+            const fileLabel = document.getElementById('file-input-label');
+            
+            fileInput.addEventListener('change', function() {
+                const files = this.files;
+                const span = fileLabel.querySelector('span');
+                
+                if (files.length > 0) {
+                    span.textContent = `${files.length} ${languageManager.getTranslation('files_selected')}`;
+                    span.classList.remove('file-placeholder');
+                    span.classList.add('file-selected');
+                } else {
+                    span.textContent = languageManager.getTranslation('no_file_chosen');
+                    span.classList.remove('file-selected');
+                    span.classList.add('file-placeholder');
+                }
+            });
+        });
+
         // Sidebar Toggle for Mobile
         document.addEventListener("DOMContentLoaded", function () {
             const hamburger = document.querySelector(".hamburger");
@@ -358,8 +624,8 @@
                         let locationDropdown = document.getElementById("location");
                         let pandaDropdown = document.getElementById("panda-name");
 
-                        locationDropdown.innerHTML = '<option value="" disabled selected>Select Location</option>';
-                        pandaDropdown.innerHTML = '<option value="" disabled selected>Select Panda Name</option>';
+                        locationDropdown.innerHTML = `<option value="" disabled selected>${languageManager.getTranslation('select_location')}</option>`;
+                        pandaDropdown.innerHTML = `<option value="" disabled selected>${languageManager.getTranslation('select_panda_name')}</option>`;
 
                         data.locations.forEach(location => {
                             let option = document.createElement("option");
@@ -381,7 +647,7 @@
             document.getElementById("bahi-name").addEventListener("input", function () {
                 let uploadMessage = document.getElementById("upload-message");
                 if (this.value.includes("_")) {
-                    uploadMessage.textContent = "Bahi Name cannot contain underscores (_).";
+                    uploadMessage.textContent = languageManager.getTranslation('bahi_name_underscore_error');
                     uploadMessage.style.color = 'red';
                 } else {
                     uploadMessage.textContent = "";
@@ -397,7 +663,7 @@
             let uploadMessage = document.getElementById("upload-message");
 
             if (bahiName.includes("_")) {
-                uploadMessage.textContent = "Bahi Name cannot contain underscores (_).";
+                uploadMessage.textContent = languageManager.getTranslation('bahi_name_underscore_error');
                 uploadMessage.style.color = 'red';
                 return;
             }
@@ -411,7 +677,7 @@
 
             let files = document.getElementById("folder-input").files;
             if (files.length === 0) {
-                uploadMessage.textContent = "Please select files to upload.";
+                uploadMessage.textContent = languageManager.getTranslation('select_files_error');
                 return;
             }
 
@@ -429,7 +695,7 @@
             }
             
             if (invalidFiles.length > 0) {
-                uploadMessage.textContent = `Error: Only .jpg, .jpeg, and .png image formats are allowed. Invalid files: ${invalidFiles.join(', ')}`;
+                uploadMessage.textContent = `${languageManager.getTranslation('invalid_file_format')} ${invalidFiles.join(', ')}`;
                 uploadMessage.style.color = 'red';
                 return;
             }
@@ -447,7 +713,7 @@
             progressBar.style.display = "block";
             progressBarFill.style.width = "0%";
             progressText.textContent = "0%";
-            uploadMessage.textContent = "Uploading to server...";
+            uploadMessage.textContent = languageManager.getTranslation('uploading_to_server');
 
             let xhr = new XMLHttpRequest();
             xhr.open("POST", "/upload_images", true);
@@ -462,17 +728,17 @@
 
             xhr.onload = function () {
                 if (xhr.status === 200) {
-                    uploadMessage.textContent = "Processing on server...";
+                    uploadMessage.textContent = languageManager.getTranslation('processing_on_server');
                     pollBackendProgress();
                 } else {
                     progressBar.style.display = "none";
-                    uploadMessage.textContent = "Upload failed: " + xhr.responseText;
+                    uploadMessage.textContent = languageManager.getTranslation('upload_failed') + " " + xhr.responseText;
                 }
             };
 
             xhr.onerror = function () {
                 progressBar.style.display = "none";
-                uploadMessage.textContent = "Upload failed due to a network error.";
+                uploadMessage.textContent = languageManager.getTranslation('upload_failed_network');
             };
 
             xhr.send(formData);
@@ -490,13 +756,13 @@
                             if (backendProgress === 100) {
                                 clearInterval(interval);
                                 progressBar.style.display = "none";
-                                uploadMessage.textContent = "Upload successful!";
+                                uploadMessage.textContent = languageManager.getTranslation('upload_successful');
                             }
                         })
                         .catch(error => {
                             clearInterval(interval);
                             progressBar.style.display = "none";
-                            uploadMessage.textContent = "Error checking progress: " + error;
+                            uploadMessage.textContent = languageManager.getTranslation('error_checking_progress') + " " + error;
                         });
                 }, 500);
             }

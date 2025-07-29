@@ -111,6 +111,32 @@
             color: #fff;
         }
 
+        /* Language Toggle */
+        .language-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1200;
+            background: #1a1a1a;
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .language-toggle:hover {
+            background: #333;
+            transform: translateY(-1px);
+        }
+
+        .language-toggle i {
+            margin-right: 5px;
+        }
+
         /* Logo */
         .logo-img {
             width: 180px;
@@ -132,6 +158,12 @@
 
         /* Responsive Design */
         @media (max-width: 768px) {
+            .language-toggle {
+                top: 15px;
+                right: 15px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
             .sidebar {
                 transform: translateX(-250px);
             }
@@ -195,40 +227,46 @@
     </style>
 </head>
 <body>
+    <!-- Language Toggle Button -->
+    <button class="language-toggle" id="languageToggle">
+        <i class="fas fa-language"></i>
+        <span id="currentLang">हिंदी</span>
+    </button>
+
     <button class="hamburger"><i class="fas fa-bars"></i></button>
     <div class="sidebar hidden">
         <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" alt="Purvaj.com Logo" class="logo-img">
-        <a href="/upload"><i class="fas fa-upload me-2"></i>Upload</a>
-        <a href="/upload_history" class="active"><i class="fas fa-history me-2"></i>Upload History</a>
-        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+        <a href="/upload"><i class="fas fa-upload me-2"></i><span data-translate="upload">Upload</span></a>
+        <a href="/upload_history" class="active"><i class="fas fa-history me-2"></i><span data-translate="upload_history">Upload History</span></a>
+        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i><span data-translate="logout">Logout</span></a>
     </div>
     <div class="content full-width">
         <div class="container mt-4">
             <div class="top-bar">
-                <h2 class="fw-bold">Upload History</h2>
+                <h2 class="fw-bold" data-translate="upload_history">Upload History</h2>
                 <button class="btn-download" onclick="downloadExcel()">
-                    <i class="fas fa-file-excel me-2"></i> Download as Excel
+                    <i class="fas fa-file-excel me-2"></i> <span data-translate="download_excel">Download as Excel</span>
                 </button>
             </div>
-            <p><strong>User ID:</strong> <span id="session-id">Loading...</span></p>
+            <p><strong data-translate="user_id">User ID:</strong> <span id="session-id">Loading...</span></p>
             <div class="table-responsive">
                 <table class="table table-bordered mt-3" id="history-table">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Batch ID</th>
-                            <th>Location</th>
-                            <th>Panda Name</th>
-                            <th>Bahi Name</th>
-                            <th>Upload Type</th>
-                            <th>Number of Images</th>
-                            <th>Approved Count</th>
-                            <th>Rejected Count</th>
-                            <th>Verification Status</th>
+                            <th data-translate="date">Date</th>
+                            <th data-translate="batch_id">Batch ID</th>
+                            <th data-translate="location">Location</th>
+                            <th data-translate="panda_name">Panda Name</th>
+                            <th data-translate="bahi_name">Bahi Name</th>
+                            <th data-translate="upload_type">Upload Type</th>
+                            <th data-translate="number_of_images">Number of Images</th>
+                            <th data-translate="approved_count">Approved Count</th>
+                            <th data-translate="rejected_count">Rejected Count</th>
+                            <th data-translate="verification_status">Verification Status</th>
                         </tr>
                     </thead>
                     <tbody id="history-table-body">
-                        <tr><td colspan="10" class="text-center">Loading data...</td></tr>
+                        <tr><td colspan="10" class="text-center" data-translate="loading_data">Loading data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -236,20 +274,141 @@
     </div>
     <footer class="custom-footer full-width text-muted">
         <div class="container d-flex justify-content-between align-items-center">
-            <span style="color:#f8f9fa;">© 2025 Purvaj</span>
+            <span style="color:#f8f9fa;" data-translate="copyright">© 2025 Purvaj</span>
             <div>
-                <a href="/about" class="text-decoration-none me-3">About</a>
-                <a href="/contact" class="text-decoration-none me-3">Contact</a>
-                <a href="/privacy" class="text-decoration-none">Privacy</a>
+                <a href="/about" class="text-decoration-none me-3" data-translate="about">About</a>
+                <a href="/contact" class="text-decoration-none me-3" data-translate="contact">Contact</a>
+                <a href="/privacy" class="text-decoration-none" data-translate="privacy">Privacy</a>
             </div>
         </div>
     </footer>
 
     <script>
+        // Translation System
+        const translations = {
+            en: {
+                upload: "Upload",
+                upload_history: "Upload History",
+                logout: "Logout",
+                user_id: "User ID:",
+                download_excel: "Download as Excel",
+                date: "Date",
+                batch_id: "Batch ID",
+                location: "Location",
+                panda_name: "Panda Name",
+                bahi_name: "Bahi Name",
+                upload_type: "Upload Type",
+                number_of_images: "Number of Images",
+                approved_count: "Approved Count",
+                rejected_count: "Rejected Count",
+                verification_status: "Verification Status",
+                loading_data: "Loading data...",
+                no_records_found: "No records found.",
+                failed_to_load: "Failed to load data.",
+                download_qc_report: "Download QC Report",
+                copyright: "© 2025 Purvaj",
+                about: "About",
+                contact: "Contact",
+                privacy: "Privacy"
+            },
+            hi: {
+                upload: "अपलोड",
+                upload_history: "अपलोड इतिहास",
+                logout: "लॉगआउट",
+                user_id: "उपयोगकर्ता आईडी:",
+                download_excel: "एक्सेल के रूप में डाउनलोड करें",
+                date: "दिनांक",
+                batch_id: "बैच आईडी",
+                location: "स्थान",
+                panda_name: "पांडा नाम",
+                bahi_name: "बही नाम",
+                upload_type: "अपलोड प्रकार",
+                number_of_images: "छवियों की संख्या",
+                approved_count: "अनुमोदित संख्या",
+                rejected_count: "अस्वीकृत संख्या",
+                verification_status: "सत्यापन स्थिति",
+                loading_data: "डेटा लोड हो रहा है...",
+                no_records_found: "कोई रिकॉर्ड नहीं मिला।",
+                failed_to_load: "डेटा लोड करने में असफल।",
+                download_qc_report: "QC रिपोर्ट डाउनलोड करें",
+                copyright: "© 2025 पूर्वज",
+                about: "हमारे बारे में",
+                contact: "संपर्क",
+                privacy: "गोपनीयता"
+            }
+        };
 
-    function downloadBatchReport(batchId) {
-        window.location.href = `/download_qc_batch_report/${batchId}`;
-    }
+        // Language Management
+        class LanguageManager {
+            constructor() {
+                this.currentLanguage = localStorage.getItem('language') || 'en';
+                this.init();
+            }
+
+            init() {
+                this.updateLanguageToggle();
+                this.translatePage();
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.getElementById('languageToggle').addEventListener('click', () => {
+                    this.toggleLanguage();
+                });
+            }
+
+            toggleLanguage() {
+                this.currentLanguage = this.currentLanguage === 'en' ? 'hi' : 'en';
+                localStorage.setItem('language', this.currentLanguage);
+                this.updateLanguageToggle();
+                this.translatePage();
+                this.updateTableMessages();
+            }
+
+            updateLanguageToggle() {
+                const toggleButton = document.getElementById('currentLang');
+                toggleButton.textContent = this.currentLanguage === 'en' ? 'हिंदी' : 'English';
+            }
+
+            translatePage() {
+                const elements = document.querySelectorAll('[data-translate]');
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-translate');
+                    if (translations[this.currentLanguage][key]) {
+                        element.textContent = translations[this.currentLanguage][key];
+                    }
+                });
+
+                // Update document title and language attribute
+                document.documentElement.lang = this.currentLanguage;
+                document.title = this.currentLanguage === 'hi' ? 'अपलोड इतिहास' : 'Upload History';
+            }
+
+            updateTableMessages() {
+                const tableBody = document.getElementById("history-table-body");
+                if (tableBody.children.length === 1) {
+                    const firstRow = tableBody.children[0];
+                    const firstCell = firstRow.children[0];
+                    if (firstCell.getAttribute('data-translate')) {
+                        const key = firstCell.getAttribute('data-translate');
+                        if (translations[this.currentLanguage][key]) {
+                            firstCell.textContent = translations[this.currentLanguage][key];
+                        }
+                    }
+                }
+            }
+
+            getTranslation(key) {
+                return translations[this.currentLanguage][key] || key;
+            }
+        }
+
+        // Initialize Language Manager
+        const languageManager = new LanguageManager();
+
+        function downloadBatchReport(batchId) {
+            window.location.href = `/download_qc_batch_report/${batchId}`;
+        }
         document.addEventListener("DOMContentLoaded", function () {
             let sessionID = sessionStorage.getItem("sessionID") || "Not Set";
             document.getElementById("session-id").textContent = sessionID;
@@ -274,17 +433,17 @@
                                     <td>${row.image_count}</td>
                                     <td>${row.approved_count}</td>
                                     <td>${row.rejected_count}</td>
-                                    <td><button onclick="downloadBatchReport('${row.batch_id}')">Download QC Report</button></td>
+                                    <td><button onclick="downloadBatchReport('${row.batch_id}')">${languageManager.getTranslation('download_qc_report')}</button></td>
                                 `;
                                 tableBody.appendChild(tr);
                             });
                         } else {
-                            tableBody.innerHTML = '<tr><td colspan="10" class="text-center">No records found.</td></tr>';
+                            tableBody.innerHTML = `<tr><td colspan="10" class="text-center">${languageManager.getTranslation('no_records_found')}</td></tr>`;
                         }
                     })
                     .catch(error => {
                         console.error("Error fetching upload history:", error);
-                        document.getElementById("history-table-body").innerHTML = '<tr><td colspan="10" class="text-center">Failed to load data.</td></tr>';
+                        document.getElementById("history-table-body").innerHTML = `<tr><td colspan="10" class="text-center">${languageManager.getTranslation('failed_to_load')}</td></tr>`;
                     });
             }
 
