@@ -1,0 +1,229 @@
+/* Upload History Filters CSS */
+
+/* Filter Container */
+.filters-container {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+}
+
+.filters-row {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+/* Filter Groups */
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-label {
+    display: block;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Search Input with Autocomplete */
+.search-container {
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #889E73;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #6c8a4c;
+    box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+}
+
+/* Autocomplete Dropdown */
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #889E73;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-item {
+    padding: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.highlighted {
+    background-color: #889E73;
+    color: white;
+}
+
+.autocomplete-loading,
+.autocomplete-no-results {
+    padding: 0.75rem;
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+/* Filter Dropdowns */
+.filter-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #889E73;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background-color: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #6c8a4c;
+    box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+}
+
+/* Filter Actions */
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: end;
+}
+
+.filter-btn {
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.filter-btn-primary {
+    background-color: #889E73;
+    color: white;
+}
+
+.filter-btn-primary:hover {
+    background-color: #6c8a4c;
+    transform: translateY(-1px);
+}
+
+.filter-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.filter-btn-secondary:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+}
+
+/* Filter Status */
+.filter-status {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.active-filters {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-tag {
+    background-color: #889E73;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.filter-tag-remove {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .filters-container {
+        padding: 1rem;
+    }
+    
+    .filters-row {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .filter-group {
+        min-width: unset;
+    }
+    
+    .filter-actions {
+        justify-content: stretch;
+    }
+    
+    .filter-btn {
+        flex: 1;
+    }
+}
+
+@media (max-width: 576px) {
+    .filters-container {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .search-input,
+    .filter-select,
+    .filter-btn {
+        padding: 0.65rem;
+        font-size: 0.85rem;
+    }
+    
+    .filter-label {
+        font-size: 0.85rem;
+    }
+} 

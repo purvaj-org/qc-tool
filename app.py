@@ -513,6 +513,47 @@ def get_upload_history():
         return jsonify({"error": "Unexpected server error"}), 500
 
 
+@app.route('/get_upload_history_filter_options', methods=['GET'])
+@no_cache
+def get_upload_history_filter_options():
+    """Get unique values for filter dropdowns"""
+    if 'user' not in session:
+        return jsonify({"success": False, "error": "User not logged in"}), 401
+
+    unique_userid = session['user']['unique_userid']
+
+    try:
+        conn = get_db_connection()
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Get unique locations
+            cursor.execute("""
+                SELECT DISTINCT location 
+                FROM pandas_upload_table 
+                WHERE unique_userid = %s AND location IS NOT NULL AND location != ''
+                ORDER BY location
+            """, (unique_userid,))
+            locations = [row['location'] for row in cursor.fetchall()]
+
+            # Get unique panda names
+            cursor.execute("""
+                SELECT DISTINCT pandas_name 
+                FROM pandas_upload_table 
+                WHERE unique_userid = %s AND pandas_name IS NOT NULL AND pandas_name != ''
+                ORDER BY pandas_name
+            """, (unique_userid,))
+            panda_names = [row['pandas_name'] for row in cursor.fetchall()]
+
+        conn.close()
+        return jsonify({
+            "success": True,
+            "locations": locations,
+            "panda_names": panda_names
+        })
+
+    except Exception as e:
+        print(f"Get filter options error: {str(e)}")
+        return jsonify({"success": False, "error": "Database error"}), 500
+
 
 @app.route('/ready_to_allocate')
 @no_cache

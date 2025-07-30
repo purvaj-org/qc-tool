@@ -10,221 +10,8 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #ffffff;
-            color: #000000;
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 250px;
-            background-color: #1a1a1a;
-            padding-top: 20px;
-            transition: transform 0.3s ease;
-            z-index: 1000;
-        }
-        .sidebar.hidden {
-            transform: translateX(-250px);
-        }
-        .sidebar a {
-            color: #fff;
-            padding: 15px 20px;
-            display: block;
-            text-decoration: none;
-        }
-        .sidebar a:hover, .sidebar a.active {
-            background-color: #889E73;
-        }
-
-        /* Content */
-        .content {
-            margin-left: 250px;
-            padding: 20px;
-            flex: 1;
-            transition: margin-left 0.3s ease;
-        }
-        .content.full-width {
-            margin-left: 0;
-        }
-
-        /* Top Bar */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .btn-download {
-            background-color: #889E73;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-download:hover {
-            background-color: #7b965c;
-        }
-
-        /* Table */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f8f9fa;
-        }
-
-        /* Footer */
-        .custom-footer {
-            margin-left: 250px;
-            background-color: #1a1a1a;
-            color: #ccc;
-            padding: 6px 20px;
-            font-size: 13px;
-            border-top: 1px solid #333;
-            transition: margin-left 0.3s ease;
-        }
-        .custom-footer.full-width {
-            margin-left: 0;
-        }
-        .custom-footer a {
-            color: #ccc;
-        }
-        .custom-footer a:hover {
-            color: #fff;
-        }
-
-        /* Language Toggle */
-        .language-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1200;
-            background: #1a1a1a;
-            border: none;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-
-        .language-toggle:hover {
-            background: #333;
-            transform: translateY(-1px);
-        }
-
-        .language-toggle i {
-            margin-right: 5px;
-        }
-
-        /* Logo */
-        .logo-img {
-            width: 180px;
-            height: auto;
-            margin: 0 auto;
-            display: block;
-            padding: 10px 0;
-        }
-
-        /* Hamburger Menu */
-        .hamburger {
-            display: none;
-            font-size: 24px;
-            background: none;
-            border: none;
-            color: #000;
-            cursor: pointer;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .language-toggle {
-                top: 15px;
-                right: 15px;
-                padding: 6px 12px;
-                font-size: 0.8rem;
-            }
-            .sidebar {
-                transform: translateX(-250px);
-            }
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            .content {
-                margin-left: 0;
-            }
-            .content.full-width {
-                margin-left: 0;
-            }
-            .custom-footer {
-                margin-left: 0;
-            }
-            .hamburger {
-                display: block;
-                position: fixed;
-                top: 20px;
-                left: 20px;
-                z-index: 1100;
-            }
-            .table-responsive {
-                font-size: 14px;
-            }
-            th, td {
-                padding: 8px;
-            }
-            .logo-img {
-                width: 150px;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .top-bar {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .btn-download {
-                width: 100%;
-                text-align: center;
-            }
-            .table-responsive {
-                font-size: 12px;
-            }
-            th, td {
-                padding: 6px;
-            }
-            .logo-img {
-                width: 120px;
-            }
-            .custom-footer {
-                font-size: 11px;
-                text-align: center;
-            }
-            .custom-footer .container {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/upload-history-main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/upload-history-filters.css') }}">
 </head>
 <body>
     <!-- Language Toggle Button -->
@@ -249,6 +36,44 @@
                 </button>
             </div>
             <p><strong data-translate="user_id">User ID:</strong> <span id="session-id">Loading...</span></p>
+            
+            <!-- Filters Section -->
+            <div class="filters-container">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label class="filter-label" for="batch-search" data-translate="batch_id_search">Batch ID Search</label>
+                        <div class="search-container">
+                            <input type="text" id="batch-search" class="search-input" data-translate-placeholder="search_batch_id" placeholder="Search by Batch ID...">
+                            <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label" for="location-filter" data-translate="location_filter">Location Filter</label>
+                        <select id="location-filter" class="filter-select">
+                            <option value="" data-translate="all_locations">All Locations</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label" for="panda-filter" data-translate="panda_name_filter">Panda Name Filter</label>
+                        <select id="panda-filter" class="filter-select">
+                            <option value="" data-translate="all_panda_names">All Panda Names</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button id="clear-filters" class="filter-btn filter-btn-secondary">
+                            <i class="fas fa-times"></i> <span data-translate="clear_filters">Clear</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="filter-status">
+                    <div id="filter-status" data-translate="filter_status">Loading...</div>
+                    <div id="active-filters" class="active-filters"></div>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-bordered mt-3" id="history-table">
                     <thead>
@@ -309,7 +134,16 @@
                 copyright: "© 2025 Purvaj",
                 about: "About",
                 contact: "Contact",
-                privacy: "Privacy"
+                privacy: "Privacy",
+                batch_id_search: "Batch ID Search",
+                search_batch_id: "Search by Batch ID...",
+                location_filter: "Location Filter",
+                all_locations: "All Locations",
+                panda_name_filter: "Panda Name Filter", 
+                all_panda_names: "All Panda Names",
+                clear_filters: "Clear",
+                filter_status: "Loading...",
+                no_results_with_filters: "No records match your search criteria."
             },
             hi: {
                 upload: "अपलोड",
@@ -334,7 +168,16 @@
                 copyright: "© 2025 पूर्वज",
                 about: "हमारे बारे में",
                 contact: "संपर्क",
-                privacy: "गोपनीयता"
+                privacy: "गोपनीयता",
+                batch_id_search: "बैच आईडी खोज",
+                search_batch_id: "बैच आईडी से खोजें...",
+                location_filter: "स्थान फिल्टर",
+                all_locations: "सभी स्थान",
+                panda_name_filter: "पांडा नाम फिल्टर",
+                all_panda_names: "सभी पांडा नाम",
+                clear_filters: "साफ़ करें",
+                filter_status: "लोड हो रहा है...",
+                no_results_with_filters: "आपके खोज मानदंडों से कोई रिकॉर्ड मेल नहीं खाता।"
             }
         };
 
@@ -413,39 +256,8 @@
             let sessionID = sessionStorage.getItem("sessionID") || "Not Set";
             document.getElementById("session-id").textContent = sessionID;
 
-            if (sessionID !== "Not Set") {
-                fetch('/get_upload_history')
-                    .then(response => response.json())
-                    .then(data => {
-                        let tableBody = document.getElementById("history-table-body");
-                        tableBody.innerHTML = "";
-
-                        if (data.history.length > 0) {
-                            data.history.forEach(row => {
-                                let tr = document.createElement("tr");
-                                tr.innerHTML = `
-                                    <td>${row.upload_date}</td>
-                                    <td>${row.batch_id}</td>
-                                    <td>${row.location}</td>
-                                    <td>${row.pandas_name}</td>
-                                    <td>${row.bahi_name}</td>
-                                    <td>${row.upload_type}</td>
-                                    <td>${row.image_count}</td>
-                                    <td>${row.approved_count}</td>
-                                    <td>${row.rejected_count}</td>
-                                    <td><button onclick="downloadBatchReport('${row.batch_id}')">${languageManager.getTranslation('download_qc_report')}</button></td>
-                                `;
-                                tableBody.appendChild(tr);
-                            });
-                        } else {
-                            tableBody.innerHTML = `<tr><td colspan="10" class="text-center">${languageManager.getTranslation('no_records_found')}</td></tr>`;
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error fetching upload history:", error);
-                        document.getElementById("history-table-body").innerHTML = `<tr><td colspan="10" class="text-center">${languageManager.getTranslation('failed_to_load')}</td></tr>`;
-                    });
-            }
+            // Data loading is now handled by the filter module
+            // The filter module will automatically load and display data
 
             // Hamburger menu toggle
             const hamburger = document.querySelector('.hamburger');
@@ -462,11 +274,34 @@
         });
 
         function downloadExcel() {
-            let table = document.getElementById("history-table");
-            let ws = XLSX.utils.table_to_sheet(table);
-            let wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Upload_History");
-            XLSX.writeFile(wb, "Upload_History.xlsx");
+            // Use filtered data if available, otherwise use the visible table
+            if (window.uploadHistoryFilters && window.uploadHistoryFilters.filteredData.length > 0) {
+                const data = window.uploadHistoryFilters.filteredData;
+                const headers = ["Date", "Batch ID", "Location", "Panda Name", "Bahi Name", "Upload Type", "Number of Images", "Approved Count", "Rejected Count"];
+                const rows = data.map(row => [
+                    row.upload_date,
+                    row.batch_id,
+                    row.location,
+                    row.pandas_name,
+                    row.bahi_name,
+                    row.upload_type,
+                    row.image_count,
+                    row.approved_count,
+                    row.rejected_count
+                ]);
+                
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Upload_History");
+                XLSX.writeFile(wb, "Upload_History.xlsx");
+            } else {
+                // Fallback to table-based export
+                let table = document.getElementById("history-table");
+                let ws = XLSX.utils.table_to_sheet(table);
+                let wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Upload_History");
+                XLSX.writeFile(wb, "Upload_History.xlsx");
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -486,5 +321,6 @@
             });
         });
     </script>
+    <script src="{{ url_for('static', filename='js/upload-history-filters.js') }}"></script>
 </body>
 </html>
