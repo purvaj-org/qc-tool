@@ -42,6 +42,101 @@
         }
         .search-form .form-label { font-weight: 600; }
         #results-table { margin-top: 2rem; }
+        
+        /* Clickable Batch ID styling */
+        .batch-id-link {
+            color: #0066cc;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .batch-id-link:hover {
+            color: #004499;
+        }
+        
+        /* Details section styling */
+        .batch-details {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .image-id-link {
+            color: #0066cc;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .image-id-link:hover {
+            color: #004499;
+        }
+        
+        /* Secure image modal styling */
+        .image-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .image-modal-content {
+            position: relative;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+        }
+        
+        .secure-image {
+            max-width: 100%;
+            max-height: 500px;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            pointer-events: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        /* Security overlay to prevent right-click */
+        .security-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            background: transparent;
+        }
+        
+        .export-btn {
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -138,10 +233,78 @@
                 </div>
             </div>
 
+            <!-- Batch Details Section (Hidden by default) -->
+            <div id="batch-details-section" class="batch-details">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 id="batch-details-title">Batch Details</h5>
+                    <div>
+                        <button id="export-excel-btn" class="btn btn-success export-btn">
+                            <i class="fas fa-file-excel me-2"></i>Export to Excel
+                        </button>
+                        <button id="close-details-btn" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-2"></i>Close
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="details-loading" class="d-none text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading details...</span>
+                    </div>
+                </div>
+                
+                <div id="qc-details-table" class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Image ID</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th>Orientation Error</th>
+                                <th>Reviewer</th>
+                                <th>QC Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qc-details-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Secure Image Modal -->
+    <div id="image-modal" class="image-modal" style="display: none;">
+        <div class="image-modal-content">
+            <button class="close-modal" id="close-image-modal">&times;</button>
+            <div class="security-overlay"></div>
+            <img id="modal-image" class="secure-image" src="" alt="Secure Image Preview">
         </div>
     </div>
 
     <script>
+        // Security measures
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+                (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Disable text selection and drag on secure images
+        document.addEventListener('selectstart', function(e) {
+            if (e.target.classList.contains('secure-image')) {
+                e.preventDefault();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             const filterLoading = document.getElementById('filter-loading');
             const setLoading = (state) => {
@@ -163,6 +326,160 @@
             const paginationControls = document.getElementById('pagination-controls');
             const resultsCount = document.getElementById('results-count');
             const searchLoading = document.getElementById('search-loading');
+            
+            // New elements for batch details
+            const batchDetailsSection = document.getElementById('batch-details-section');
+            const batchDetailsTitle = document.getElementById('batch-details-title');
+            const qcDetailsBody = document.getElementById('qc-details-body');
+            const detailsLoading = document.getElementById('details-loading');
+            const closeDetailsBtn = document.getElementById('close-details-btn');
+            const exportExcelBtn = document.getElementById('export-excel-btn');
+            
+            // Image modal elements
+            const imageModal = document.getElementById('image-modal');
+            const modalImage = document.getElementById('modal-image');
+            const closeImageModal = document.getElementById('close-image-modal');
+            
+            let currentBatchId = null;
+
+            // Close batch details
+            closeDetailsBtn.addEventListener('click', function() {
+                batchDetailsSection.style.display = 'none';
+                currentBatchId = null;
+            });
+
+            // Close image modal
+            closeImageModal.addEventListener('click', function() {
+                imageModal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            imageModal.addEventListener('click', function(e) {
+                if (e.target === imageModal) {
+                    imageModal.style.display = 'none';
+                }
+            });
+
+            // Export to Excel
+            exportExcelBtn.addEventListener('click', function() {
+                if (!currentBatchId) return;
+                
+                exportExcelBtn.disabled = true;
+                exportExcelBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+                
+                fetch(`/api/manager/batch/${currentBatchId}/export`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.blob();
+                    }
+                    throw new Error('Export failed');
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `batch_${currentBatchId}_details.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                })
+                .catch(error => {
+                    console.error('Export error:', error);
+                    alert('Failed to export data');
+                })
+                .finally(() => {
+                    exportExcelBtn.disabled = false;
+                    exportExcelBtn.innerHTML = '<i class="fas fa-file-excel me-2"></i>Export to Excel';
+                });
+            });
+
+            // Function to show batch details
+            function showBatchDetails(batchId) {
+                currentBatchId = batchId;
+                batchDetailsTitle.textContent = `Batch Details: ${batchId}`;
+                batchDetailsSection.style.display = 'block';
+                detailsLoading.classList.remove('d-none');
+                qcDetailsBody.innerHTML = '';
+                
+                // Scroll to details section
+                batchDetailsSection.scrollIntoView({ behavior: 'smooth' });
+                
+                fetch(`/api/manager/batch/${batchId}/qc-details`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        qcDetailsBody.innerHTML = '';
+                        data.qc_details.forEach(detail => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td><span class="image-id-link" data-batch-id="${batchId}" data-image-id="${detail.image_id}">${detail.image_id}</span></td>
+                                <td><span class="badge ${getStatusBadgeClass(detail.status)}">${detail.status}</span></td>
+                                <td>${detail.remarks || '-'}</td>
+                                <td>${detail.orientation_error || '-'}</td>
+                                <td>${detail.reviewer}</td>
+                                <td>${detail.qc_date ? new Date(detail.qc_date).toLocaleDateString() : '-'}</td>
+                            `;
+                            qcDetailsBody.appendChild(row);
+                        });
+                        
+                        // Add click listeners to image IDs
+                        document.querySelectorAll('.image-id-link').forEach(link => {
+                            link.addEventListener('click', function() {
+                                const batchId = this.getAttribute('data-batch-id');
+                                const imageId = this.getAttribute('data-image-id');
+                                showSecureImage(batchId, imageId);
+                            });
+                        });
+                    } else {
+                        qcDetailsBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load details</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching batch details:', error);
+                    qcDetailsBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading details</td></tr>';
+                })
+                .finally(() => {
+                    detailsLoading.classList.add('d-none');
+                });
+            }
+
+            // Function to show secure image
+            function showSecureImage(batchId, imageId) {
+                // First get the image URL from the batch images API
+                fetch(`/api/manager/batch/${batchId}/images`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const imageData = data.images.find(img => img.image_id === imageId);
+                        if (imageData) {
+                            modalImage.src = imageData.thumbnail_url;
+                            imageModal.style.display = 'flex';
+                        } else {
+                            alert('Image not found');
+                        }
+                    } else {
+                        alert('Failed to load image');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading image:', error);
+                    alert('Error loading image');
+                });
+            }
+
+            // Helper function for status badge classes
+            function getStatusBadgeClass(status) {
+                switch(status.toLowerCase()) {
+                    case 'accepted': return 'bg-success';
+                    case 'rejected': return 'bg-danger';
+                    case 'pending': return 'bg-warning';
+                    default: return 'bg-secondary';
+                }
+            }
 
             // Fetch locations when vendor changes
             function updateLocationsForVendor(vendorId) {
@@ -262,7 +579,7 @@
                             tr.innerHTML = `
                                 <td>${row.vendor_name}</td>
                                 <td>${new Date(row.upload_date).toLocaleDateString()}</td>
-                                <td>${row.batch_id}</td>
+                                <td><span class="batch-id-link" data-batch-id="${row.batch_id}">${row.batch_id}</span></td>
                                 <td>${row.location}</td>
                                 <td>${row.pandas_name}</td>
                                 <td>${row.bahi_name}</td>
@@ -271,6 +588,14 @@
                                 <td>${row.rejected_count}</td>
                             `;
                             resultsBody.appendChild(tr);
+                        });
+                        
+                        // Add click listeners to batch ID links
+                        document.querySelectorAll('.batch-id-link').forEach(link => {
+                            link.addEventListener('click', function() {
+                                const batchId = this.getAttribute('data-batch-id');
+                                showBatchDetails(batchId);
+                            });
                         });
                     } else {
                         // Display error from backend or 'No results' message

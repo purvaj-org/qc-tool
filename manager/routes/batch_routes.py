@@ -265,3 +265,48 @@ def export_batch_details(batch_id):
     finally:
         if conn:
             conn.close() 
+
+
+
+@batch_bp.route('/api/manager/batch/<string:batch_id>/qc-details')
+@manager_required
+def get_batch_qc_details(batch_id):
+    """Get QC details for a specific batch including Image ID, Status, Remarks, etc."""
+    logger.info(f"Fetching QC details for batch_id: {batch_id}")
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    i.image_id,
+                    COALESCE(q.status, 'Not Assigned') AS status,
+                    q.remarks,
+                    q.orientation_error,
+                    COALESCE(u.name, 'Not Assigned') AS reviewer,
+                    q.qc_date
+                FROM image_table i
+                LEFT JOIN qc_table q ON i.image_id = q.image_id AND i.batch_id = q.batch_id
+                LEFT JOIN user_table u ON q.unique_userid = u.unique_userid
+                WHERE i.batch_id = %s
+                ORDER BY i.image_id
+            """, (batch_id,))
+            
+            qc_details = cursor.fetchall()
+            
+            # Format dates for JSON serialization
+            for detail in qc_details:
+                if detail['qc_date']:
+                    detail['qc_date'] = detail['qc_date'].isoformat()
+                else:
+                    detail['qc_date'] = None
+            
+            logger.info(f"Successfully retrieved QC details for {len(qc_details)} images in batch: {batch_id}")
+            return jsonify({'success': True, 'qc_details': qc_details})
+            
+    except Exception as e:
+        logger.error(f"Error fetching QC details: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Failed to fetch QC details'}), 500
+    finally:
+        if conn:
+            conn.close()
