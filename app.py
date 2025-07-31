@@ -12,6 +12,7 @@ from routes.qc import qc_bp
 from routes.reports import reports_bp
 from routes.download import download_bp
 from routes.manager.manager_dashboard import manager_bp
+from routes.image_viewer import image_viewer_bp
 
 # Import utilities
 from utils.helpers import update_allocation_table
@@ -33,6 +34,7 @@ app.register_blueprint(qc_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(download_bp)
 app.register_blueprint(manager_bp)
+app.register_blueprint(image_viewer_bp)
 
 # Background scheduler setup
 scheduler = None

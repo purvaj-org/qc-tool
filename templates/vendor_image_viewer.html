@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            user-select: none; /* Disable text selection */
+        }
+
+        /* Disable right-click context menu */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .sidebar {
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 20vw;
+            min-width: 200px;
+            max-width: 300px;
+            background-color: #1a1a1a;
+            padding-top: 1rem;
+            overflow-y: auto;
+        }
+
+        .sidebar a {
+            color: #fff;
+            padding: 1rem 1.5rem;
+            display: block;
+            text-decoration: none;
+            font-size: clamp(0.9rem, 1.2vw, 1rem);
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #889E73;
+        }
+
+        .content {
+            margin-left: 20vw;
+            min-height: calc(100vh - 60px);
+            padding: 2vw;
+            flex: 1;
+        }
+
+        .viewer-heading {
+            font-size: clamp(1.5rem, 2.5vw, 2rem);
+            font-weight: 700;
+            margin-bottom: 2rem;
+            line-height: 1.2;
+        }
+
+        /* Search and Filter Styles */
+        .search-container {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 2px solid #889E73;
+        }
+
+        .autocomplete-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #889E73;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            transition: background-color 0.2s ease;
+        }
+
+        .autocomplete-item:hover, .autocomplete-item.highlighted {
+            background-color: #889E73;
+            color: white;
+        }
+
+        #batch-id-filter {
+            border: 2px solid #889E73;
+        }
+
+        #batch-id-filter:focus {
+            border-color: #889E73;
+            box-shadow: 0 0 0 0.2rem rgba(136, 158, 115, 0.25);
+        }
+
+        /* Batch List Styles */
+        .batch-list {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 2px solid #889E73;
+            margin-bottom: 2rem;
+        }
+
+        .batch-list-header {
+            background-color: #889E73;
+            color: white;
+            padding: 1rem;
+            font-weight: 600;
+        }
+
+        .batch-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .batch-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .batch-item.active {
+            background-color: #e8f0e6;
+            border-left: 4px solid #889E73;
+        }
+
+        .batch-id {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .batch-info {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .count-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0 0.2rem;
+        }
+
+        .count-accepted {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+        
+        .count-rejected {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .count-pending {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+            border: 1px solid #6c757d;
+        }
+
+        /* Image Display Styles */
+        .image-section {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 2px solid #889E73;
+            padding: 1.5rem;
+        }
+
+        .status-tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 1.5rem;
+        }
+
+        .status-tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.2s ease;
+        }
+
+        .status-tab.active {
+            color: #889E73;
+            border-bottom: 3px solid #889E73;
+        }
+
+        .status-tab:hover {
+            color: #889E73;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .image-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-thumbnail {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-info {
+            padding: 0.75rem;
+        }
+
+        .image-filename {
+            font-size: 0.8rem;
+            color: #495057;
+            margin-bottom: 0.25rem;
+            word-break: break-all;
+        }
+
+        .image-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-accepted {
+            color: #28a745;
+        }
+
+        .status-rejected {
+            color: #dc3545;
+        }
+
+        .status-pending {
+            color: #6c757d;
+        }
+
+        .no-batch-selected {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .no-images {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
+        /* Footer */
+        .custom-footer {
+            margin-left: 20vw;
+            background-color: #1a1a1a;
+            color: #ccc;
+            padding: 0.5rem 2vw;
+            font-size: clamp(0.7rem, 0.9vw, 0.8rem);
+            border-top: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .custom-footer a {
+            color: #ccc;
+            text-decoration: none;
+        }
+
+        .custom-footer a:hover {
+            color: #fff;
+        }
+
+        .logo-img {
+            width: 80%;
+            max-width: 180px;
+            height: auto;
+            margin: 0 auto;
+            display: block;
+            padding: 0.5rem 0;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .sidebar {
+                width: 18vw;
+            }
+            .content, .custom-footer {
+                margin-left: 18vw;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 200px;
+            }
+            .content, .custom-footer {
+                margin-left: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" 
+             alt="Purvaj.com Logo" 
+             class="logo-img">
+        <a href="/upload"><i class="fas fa-upload me-2"></i>Upload</a>
+        <a href="/upload_history"><i class="fas fa-history me-2"></i>Upload History</a>
+        <a href="/image_viewer" class="active"><i class="fas fa-images me-2"></i>Image Viewer</a>
+        <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+    </div>
+
+    <div class="content">
+        <div class="container-fluid">
+            <h2 class="viewer-heading">Image Viewer</h2>
+            
+            <!-- Search Section -->
+            <div class="search-container">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="autocomplete-container">
+                            <input type="text" class="form-control" id="batch-id-filter" placeholder="Search by Batch ID...">
+                            <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-secondary me-2" type="button" id="search-btn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" id="clear-btn">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Batch List Column -->
+                <div class="col-md-4">
+                    <div class="batch-list">
+                        <div class="batch-list-header">
+                            <i class="fas fa-folder me-2"></i>Your Batches
+                        </div>
+                        <div id="batch-list-container">
+                            <div class="loading">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading batches...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Image Display Column -->
+                <div class="col-md-8">
+                    <div class="image-section">
+                        <div id="no-batch-selected" class="no-batch-selected">
+                            <i class="fas fa-images fa-3x mb-3 text-muted"></i>
+                            <h5>Select a batch to view images</h5>
+                            <p class="text-muted">Choose a batch from the left panel to see accepted and rejected images.</p>
+                        </div>
+
+                        <div id="image-viewer-content" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 id="selected-batch-title">Batch Images</h5>
+                                <div id="image-count-info" class="text-muted"></div>
+                            </div>
+
+                            <!-- Status Tabs -->
+                            <div class="status-tabs">
+                                <button class="status-tab active" data-status="all">
+                                    <i class="fas fa-th me-1"></i>All Images
+                                </button>
+                                <button class="status-tab" data-status="accepted">
+                                    <i class="fas fa-check-circle me-1"></i>Accepted
+                                </button>
+                                <button class="status-tab" data-status="rejected">
+                                    <i class="fas fa-times-circle me-1"></i>Rejected
+                                </button>
+                            </div>
+
+                            <!-- Images Grid -->
+                            <div id="images-grid" class="image-grid">
+                                <!-- Images will be loaded here -->
+                            </div>
+
+                            <div id="loading-images" class="loading" style="display: none;">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading images...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="custom-footer text-muted">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span style="color:#f8f9fa;">© 2025 Purvaj</span>
+            <div>
+                <a href="/about" class="me-3">About</a>
+                <a href="/contact" class="me-3">Contact</a>
+                <a href="/privacy">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Security: Disable developer tools and right-click
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        document.addEventListener('keydown', function(e) {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+            if (
+                e.key === 'F12' ||
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                (e.ctrlKey && e.key === 'U') ||
+                (e.ctrlKey && e.shiftKey && e.key === 'K')
+            ) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Disable drag and drop
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Variables
+        let allBatches = [];
+        let currentBatch = null;
+        let currentImages = [];
+        let currentStatus = 'all';
+        let autocompleteTimeout;
+        let autocompleteVisible = false;
+        let currentHighlightIndex = -1;
+
+        // Initialize
+        $(document).ready(function() {
+            loadBatches();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Search functionality
+            $('#search-btn').click(function() {
+                const batchFilter = $('#batch-id-filter').val().trim();
+                loadBatches(batchFilter);
+            });
+
+            $('#clear-btn').click(function() {
+                $('#batch-id-filter').val('');
+                hideAutocomplete();
+                loadBatches();
+            });
+
+            // Autocomplete
+            $('#batch-id-filter').on('input', function() {
+                const query = $(this).val().trim();
+                clearTimeout(autocompleteTimeout);
+                autocompleteTimeout = setTimeout(() => {
+                    if (query.length > 0) {
+                        showAutocompleteSuggestions(query);
+                    } else {
+                        hideAutocomplete();
+                    }
+                }, 300);
+            });
+
+            $('#batch-id-filter').on('keydown', function(e) {
+                if (autocompleteVisible) {
+                    handleAutocompleteKeyNavigation(e);
+                }
+            });
+
+            // Hide autocomplete when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.autocomplete-container').length) {
+                    hideAutocomplete();
+                }
+            });
+
+            // Status tabs
+            $('.status-tab').click(function() {
+                $('.status-tab').removeClass('active');
+                $(this).addClass('active');
+                currentStatus = $(this).data('status');
+                if (currentBatch) {
+                    loadBatchImages(currentBatch.batch_id, currentStatus);
+                }
+            });
+        }
+
+        function loadBatches(batchFilter = '') {
+            const params = batchFilter ? `?batch_filter=${encodeURIComponent(batchFilter)}` : '';
+            
+            $.get(`/get_vendor_batches${params}`)
+                .done(function(response) {
+                    if (response.success) {
+                        allBatches = response.batches;
+                        renderBatchList();
+                    } else {
+                        showError('Failed to load batches');
+                    }
+                })
+                .fail(function() {
+                    showError('Error loading batches');
+                });
+        }
+
+        function renderBatchList() {
+            const container = $('#batch-list-container');
+            
+            if (allBatches.length === 0) {
+                container.html(`
+                    <div class="no-images">
+                        <i class="fas fa-folder-open fa-2x mb-2 text-muted"></i>
+                        <p>No batches found</p>
+                    </div>
+                `);
+                return;
+            }
+
+            let html = '';
+            allBatches.forEach(batch => {
+                const isActive = currentBatch && currentBatch.batch_id === batch.batch_id;
+                html += `
+                    <div class="batch-item ${isActive ? 'active' : ''}" onclick="selectBatch('${batch.batch_id}')">
+                        <div class="batch-id">${batch.batch_id}</div>
+                        <div class="batch-info">
+                            <div class="mb-1">
+                                <small><strong>Location:</strong> ${batch.location}</small><br>
+                                <small><strong>Panda:</strong> ${batch.pandas_name}</small><br>
+                                <small><strong>Bahi:</strong> ${batch.bahi_name}</small>
+                            </div>
+                            <div class="mb-1">
+                                <span class="count-badge count-accepted">✓ ${batch.accepted_count}</span>
+                                <span class="count-badge count-rejected">✗ ${batch.rejected_count}</span>
+                                <span class="count-badge count-pending">⏳ ${batch.pending_count}</span>
+                            </div>
+                            <small class="text-muted">${formatDate(batch.upload_date)}</small>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.html(html);
+        }
+
+        function selectBatch(batchId) {
+            const batch = allBatches.find(b => b.batch_id === batchId);
+            if (!batch) return;
+
+            currentBatch = batch;
+            currentStatus = 'all';
+            
+            // Update UI
+            $('.batch-item').removeClass('active');
+            $(`.batch-item`).each(function() {
+                if ($(this).text().includes(batchId)) {
+                    $(this).addClass('active');
+                }
+            });
+
+            $('.status-tab').removeClass('active');
+            $('.status-tab[data-status="all"]').addClass('active');
+
+            $('#no-batch-selected').hide();
+            $('#image-viewer-content').show();
+            $('#selected-batch-title').text(`Batch: ${batchId}`);
+
+            loadBatchImages(batchId, currentStatus);
+        }
+
+        function loadBatchImages(batchId, status) {
+            $('#loading-images').show();
+            $('#images-grid').empty();
+
+            $.get(`/get_batch_images?batch_id=${encodeURIComponent(batchId)}&status=${status}`)
+                .done(function(response) {
+                    $('#loading-images').hide();
+                    
+                    if (response.success) {
+                        currentImages = response.images;
+                        renderImages();
+                        updateImageCount(response.total, status);
+                    } else {
+                        showError('Failed to load images');
+                    }
+                })
+                .fail(function() {
+                    $('#loading-images').hide();
+                    showError('Error loading images');
+                });
+        }
+
+        function renderImages() {
+            const grid = $('#images-grid');
+            
+            if (currentImages.length === 0) {
+                grid.html(`
+                    <div class="no-images" style="grid-column: 1 / -1;">
+                        <i class="fas fa-image fa-2x mb-2 text-muted"></i>
+                        <p>No images found for this filter</p>
+                    </div>
+                `);
+                return;
+            }
+
+            let html = '';
+            currentImages.forEach(image => {
+                const statusClass = `status-${image.status}`;
+                html += `
+                    <div class="image-card">
+                        <img src="${image.thumbnail_url}" 
+                             alt="${image.image_id}" 
+                             class="image-thumbnail"
+                             oncontextmenu="return false;"
+                             ondragstart="return false;">
+                        <div class="image-info">
+                            <div class="image-filename">${image.image_id}</div>
+                            <div class="image-status ${statusClass}">${image.status}</div>
+                            ${image.qc_date ? `<small class="text-muted">${formatDate(image.qc_date)}</small>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            grid.html(html);
+        }
+
+        function updateImageCount(total, status) {
+            const statusText = status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1);
+            $('#image-count-info').text(`${statusText}: ${total} images`);
+        }
+
+        // Autocomplete functions
+        function showAutocompleteSuggestions(query) {
+            const matchingBatches = allBatches.filter(batch => 
+                batch.batch_id.toLowerCase().includes(query.toLowerCase())
+            );
+
+            const dropdown = $('#autocomplete-dropdown');
+            
+            if (matchingBatches.length === 0) {
+                dropdown.html('<div class="autocomplete-item">No matching batch IDs found</div>');
+            } else {
+                let html = '';
+                matchingBatches.slice(0, 10).forEach((batch, index) => {
+                    const regex = new RegExp(`(${query})`, 'gi');
+                    const highlightedText = batch.batch_id.replace(regex, '<strong>$1</strong>');
+                    html += `<div class="autocomplete-item" data-batch-id="${batch.batch_id}" data-index="${index}">${highlightedText}</div>`;
+                });
+                dropdown.html(html);
+
+                $('.autocomplete-item').click(function() {
+                    const batchId = $(this).data('batch-id');
+                    $('#batch-id-filter').val(batchId);
+                    hideAutocomplete();
+                    loadBatches(batchId);
+                });
+            }
+
+            dropdown.show();
+            autocompleteVisible = true;
+            currentHighlightIndex = -1;
+        }
+
+        function hideAutocomplete() {
+            $('#autocomplete-dropdown').hide();
+            autocompleteVisible = false;
+            currentHighlightIndex = -1;
+        }
+
+        function handleAutocompleteKeyNavigation(e) {
+            const items = $('.autocomplete-item');
+            
+            switch(e.keyCode) {
+                case 38: // Up arrow
+                    e.preventDefault();
+                    if (currentHighlightIndex > 0) {
+                        highlightAutocompleteItem(currentHighlightIndex - 1);
+                    }
+                    break;
+                case 40: // Down arrow
+                    e.preventDefault();
+                    if (currentHighlightIndex < items.length - 1) {
+                        highlightAutocompleteItem(currentHighlightIndex + 1);
+                    }
+                    break;
+                case 13: // Enter
+                    e.preventDefault();
+                    if (currentHighlightIndex >= 0 && currentHighlightIndex < items.length) {
+                        const batchId = $(items[currentHighlightIndex]).data('batch-id');
+                        $('#batch-id-filter').val(batchId);
+                        hideAutocomplete();
+                        loadBatches(batchId);
+                    }
+                    break;
+                case 27: // Escape
+                    e.preventDefault();
+                    hideAutocomplete();
+                    break;
+            }
+        }
+
+        function highlightAutocompleteItem(index) {
+            $('.autocomplete-item').removeClass('highlighted');
+            const items = $('.autocomplete-item');
+            
+            if (index >= 0 && index < items.length) {
+                $(items[index]).addClass('highlighted');
+                currentHighlightIndex = index;
+            }
+        }
+
+        // Utility functions
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric',
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showError(message) {
+            console.error(message);
+            // You could add a toast notification here
+        }
+
+        // Session check
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/check_session', {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.valid) {
+                    window.location.href = '/login';
+                }
+            })
+            .catch(error => {
+                console.error('Session check failed:', error);
+                window.location.href = '/login';
+            });
+        });
+
+        // Additional security measures
+        window.addEventListener('beforeunload', function() {
+            // Clear any cached data
+            currentImages = [];
+            allBatches = [];
+        });
+
+        // Prevent copying images
+        document.addEventListener('copy', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Prevent saving images
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+</body>
+</html> 
