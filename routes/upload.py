@@ -115,11 +115,8 @@ def upload_images():
                 filename = os.path.basename(file.filename)
 
                 if filename.lower().endswith((".jpg", ".jpeg", ".png")):
-                    # Adjust s3_path based on upload_type
-                    if upload_type == "reupload":
-                        s3_path = f"{session_id}/{location}/{panda_name}/{bahi_name}/{record_type}/{upload_type}/{filename}"
-                    else:
-                        s3_path = f"{session_id}/{location}/{panda_name}/{bahi_name}/{record_type}/{filename}"
+                    # S3 path is same for all upload types - reuploads overwrite originals
+                    s3_path = f"{session_id}/{location}/{panda_name}/{bahi_name}/{record_type}/{filename}"
                     
                     upload_result = upload_to_s3(file, s3_path)
 
