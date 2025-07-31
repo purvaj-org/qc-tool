@@ -5,8 +5,8 @@ import pandas as pd
 from io import BytesIO
 from s3_upload import s3_client, SPACES_NAME
 from botocore.exceptions import ClientError
-from ..utils.database import get_db_connection
-from ..utils.auth import manager_required
+from utils.database import get_db_connection
+from utils.auth import manager_required
 
 logger = logging.getLogger(__name__)
 

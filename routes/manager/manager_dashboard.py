@@ -3,8 +3,8 @@ from datetime import datetime, date
 import logging
 import pandas as pd
 from io import BytesIO
-from .utils.database import get_db_connection
-from .utils.auth import manager_required
+from utils.database import get_db_connection
+from utils.auth import manager_required
 from .routes.batch_routes import batch_bp
 
 # Configure logging
