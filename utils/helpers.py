@@ -40,64 +40,30 @@ def update_allocation_table():
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT batch_id, upload_date, image_count, status 
-                FROM allocation_table
+                UPDATE allocation_table a
+                LEFT JOIN (
+                    SELECT 
+                        i.batch_id,
+                        i.date_uploaded,
+                        COALESCE(SUM(CASE WHEN q.status = 'accepted' THEN 1 ELSE 0 END), 0) as approved_count,
+                        COALESCE(SUM(CASE WHEN q.status = 'rejected' THEN 1 ELSE 0 END), 0) as rejected_count,
+                        COALESCE(COUNT(q.image_id), 0) as total_processed
+                    FROM image_table i
+                    LEFT JOIN qc_table q ON i.image_id = q.image_id AND i.batch_id = q.batch_id
+                    GROUP BY i.batch_id, i.date_uploaded
+                ) qc_stats ON a.batch_id = qc_stats.batch_id AND a.upload_date = qc_stats.date_uploaded
+                SET 
+                    a.approved_count = COALESCE(qc_stats.approved_count, 0),
+                    a.rejected_count = COALESCE(qc_stats.rejected_count, 0),
+                    a.status = CASE 
+                        WHEN a.status = 'revoked' THEN 'revoked'
+                        WHEN COALESCE(qc_stats.total_processed, 0) = 0 THEN 'Pending'
+                        WHEN COALESCE(qc_stats.total_processed, 0) < a.image_count THEN 'In Progress'
+                        WHEN COALESCE(qc_stats.total_processed, 0) = a.image_count THEN 'Completed'
+                        ELSE 'Error'
+                    END
+                WHERE a.status != 'revoked'
             """)
-            allocations = cursor.fetchall()
-
-            for allocation in allocations:
-                batch_id = allocation['batch_id']
-                upload_date = allocation['upload_date']
-                image_count = allocation['image_count']
-                current_status = allocation['status']
-
-                cursor.execute("""
-                    SELECT image_id 
-                    FROM image_table 
-                    WHERE batch_id = %s AND date_uploaded = %s
-                """, (batch_id, upload_date))
-                image_ids = [row['image_id'] for row in cursor.fetchall()]
-
-                if image_ids:
-                    format_strings = ','.join(['%s'] * len(image_ids))
-                    cursor.execute(f"""
-                        SELECT status, COUNT(*) as count 
-                        FROM qc_table 
-                        WHERE batch_id = %s AND image_id IN ({format_strings})
-                        GROUP BY status
-                    """, [batch_id] + image_ids)
-                    qc_counts = cursor.fetchall()
-
-                    approved_count = 0
-                    rejected_count = 0
-                    for row in qc_counts:
-                        if row['status'] == 'accepted':
-                            approved_count = row['count']
-                        elif row['status'] == 'rejected':
-                            rejected_count = row['count']
-                else:
-                    approved_count = 0
-                    rejected_count = 0
-
-                total_processed = approved_count + rejected_count
-
-                if current_status == 'revoked':
-                    new_status = 'revoked'
-                elif total_processed == 0:
-                    new_status = 'Pending'
-                elif total_processed < image_count:
-                    new_status = 'In Progress'
-                elif total_processed == image_count:
-                    new_status = 'Completed'
-                else:
-                    new_status = 'Error'
-
-                cursor.execute("""
-                    UPDATE allocation_table 
-                    SET approved_count = %s, rejected_count = %s, status = %s 
-                    WHERE batch_id = %s AND upload_date = %s
-                """, (approved_count, rejected_count, new_status, batch_id, upload_date))
-
             conn.commit()
     except Exception as e:
         conn.rollback()
