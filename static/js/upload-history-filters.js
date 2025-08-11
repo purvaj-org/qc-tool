@@ -13,6 +13,13 @@ class UploadHistoryFilters {
             pandaName: ''
         };
         
+        // Pagination state
+        this.currentPage = 1;
+        this.perPage = 10;
+        this.totalRecords = 0;
+        this.totalPages = 0;
+        this.paginationInfo = {};
+        
         // Autocomplete state
         this.autocompleteTimeout = null;
         this.currentHighlightIndex = -1;
@@ -64,17 +71,32 @@ class UploadHistoryFilters {
 
     async loadInitialData() {
         try {
-            const response = await fetch('/get_upload_history');
+            await this.loadPageData(1);
+        } catch (error) {
+            console.error('Error loading upload history:', error);
+            this.showError('Failed to load upload history data');
+        }
+    }
+
+    async loadPageData(page = 1) {
+        try {
+            const response = await fetch(`/get_upload_history?page=${page}&per_page=${this.perPage}`);
             const data = await response.json();
             
             if (data.history) {
                 this.allData = data.history;
                 this.filteredData = [...this.allData];
+                this.currentPage = page;
+                this.paginationInfo = data.pagination;
+                this.totalRecords = data.pagination.total_records;
+                this.totalPages = data.pagination.total_pages;
+                
                 this.renderTable();
+                this.renderPagination();
                 this.updateFilterStatus();
             }
         } catch (error) {
-            console.error('Error loading upload history:', error);
+            console.error('Error loading page data:', error);
             this.showError('Failed to load upload history data');
         }
     }
@@ -144,6 +166,8 @@ class UploadHistoryFilters {
     }
 
     performSearch() {
+        // For now, we'll filter on the current page data
+        // In a full implementation, you might want to send filters to the server
         this.filteredData = this.allData.filter(item => {
             const batchMatch = !this.activeFilters.batchId || 
                 item.batch_id.toLowerCase().includes(this.activeFilters.batchId.toLowerCase());
@@ -297,10 +321,8 @@ class UploadHistoryFilters {
             pandaName: ''
         };
 
-        // Reset data
-        this.filteredData = [...this.allData];
-        this.renderTable();
-        this.updateFilterStatus();
+        // Reset data and reload first page
+        this.loadPageData(1);
         this.hideAutocomplete();
     }
 
@@ -333,21 +355,7 @@ class UploadHistoryFilters {
         });
     }
 
-    updateFilterStatus() {
-        const statusElement = document.getElementById('filter-status');
-        if (!statusElement) return;
 
-        const activeFilterCount = Object.values(this.activeFilters).filter(value => value !== '').length;
-        const totalResults = this.filteredData.length;
-        
-        let statusText = `Showing ${totalResults} of ${this.allData.length} records`;
-        if (activeFilterCount > 0) {
-            statusText += ` (${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} applied)`;
-        }
-        
-        statusElement.textContent = statusText;
-        this.renderActiveFilters();
-    }
 
     renderActiveFilters() {
         const container = document.getElementById('active-filters');
@@ -402,10 +410,123 @@ class UploadHistoryFilters {
         return Object.values(this.activeFilters).some(value => value !== '');
     }
 
+    renderPagination() {
+        const paginationContainer = document.getElementById('pagination-container');
+        const paginationControls = document.getElementById('pagination-controls');
+        const paginationInfoText = document.getElementById('pagination-info-text');
+        
+        if (!paginationContainer || !paginationControls || !this.paginationInfo) return;
+
+        // Show pagination container only if there are records and multiple pages
+        paginationContainer.style.display = (this.totalRecords > 0 && this.totalPages > 1) ? 'block' : 'none';
+        
+        if (this.totalPages <= 1) return;
+
+        // Update pagination info text
+        const startRecord = ((this.currentPage - 1) * this.perPage) + 1;
+        const endRecord = Math.min(this.currentPage * this.perPage, this.totalRecords);
+        const showingText = window.languageManager ? window.languageManager.getTranslation('showing_records') : 'Showing records';
+        const ofText = window.languageManager ? window.languageManager.getTranslation('of') : 'of';
+        paginationInfoText.textContent = `${showingText} ${startRecord}-${endRecord} ${ofText} ${this.totalRecords}`;
+
+        // Clear existing pagination controls
+        paginationControls.innerHTML = '';
+
+        // Previous button
+        const prevText = window.languageManager ? window.languageManager.getTranslation('previous') : 'Previous';
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${!this.paginationInfo.has_prev ? 'disabled' : ''}`;
+        prevLi.innerHTML = `<a class="page-link" href="#" data-page="${this.currentPage - 1}">${prevText}</a>`;
+        paginationControls.appendChild(prevLi);
+
+        // Page numbers
+        const startPage = Math.max(1, this.currentPage - 2);
+        const endPage = Math.min(this.totalPages, this.currentPage + 2);
+
+        // First page if not in range
+        if (startPage > 1) {
+            const firstLi = document.createElement('li');
+            firstLi.className = 'page-item';
+            firstLi.innerHTML = '<a class="page-link" href="#" data-page="1">1</a>';
+            paginationControls.appendChild(firstLi);
+            
+            if (startPage > 2) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+                paginationControls.appendChild(ellipsisLi);
+            }
+        }
+
+        // Page range
+        for (let i = startPage; i <= endPage; i++) {
+            const pageLi = document.createElement('li');
+            pageLi.className = `page-item ${i === this.currentPage ? 'active' : ''}`;
+            pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+            paginationControls.appendChild(pageLi);
+        }
+
+        // Last page if not in range
+        if (endPage < this.totalPages) {
+            if (endPage < this.totalPages - 1) {
+                const ellipsisLi = document.createElement('li');
+                ellipsisLi.className = 'page-item disabled';
+                ellipsisLi.innerHTML = '<span class="page-link">...</span>';
+                paginationControls.appendChild(ellipsisLi);
+            }
+            
+            const lastLi = document.createElement('li');
+            lastLi.className = 'page-item';
+            lastLi.innerHTML = `<a class="page-link" href="#" data-page="${this.totalPages}">${this.totalPages}</a>`;
+            paginationControls.appendChild(lastLi);
+        }
+
+        // Next button
+        const nextText = window.languageManager ? window.languageManager.getTranslation('next') : 'Next';
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${!this.paginationInfo.has_next ? 'disabled' : ''}`;
+        nextLi.innerHTML = `<a class="page-link" href="#" data-page="${this.currentPage + 1}">${nextText}</a>`;
+        paginationControls.appendChild(nextLi);
+
+        // Add click handlers
+        paginationControls.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (e.target.tagName === 'A' && !e.target.closest('.disabled')) {
+                const page = parseInt(e.target.dataset.page);
+                if (page && page !== this.currentPage) {
+                    this.loadPageData(page);
+                }
+            }
+        });
+    }
+
+    updateFilterStatus() {
+        const statusElement = document.getElementById('filter-status');
+        if (!statusElement) return;
+
+        const activeFilterCount = Object.values(this.activeFilters).filter(value => value !== '').length;
+        const currentResults = this.filteredData.length;
+        const totalResults = this.totalRecords;
+        
+        let statusText = `Showing ${currentResults} of ${totalResults} records`;
+        if (activeFilterCount > 0) {
+            statusText += ` (${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} applied)`;
+        }
+        
+        statusElement.textContent = statusText;
+        this.renderActiveFilters();
+    }
+
     showError(message) {
         const tableBody = document.getElementById("history-table-body");
         if (tableBody) {
             tableBody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">${message}</td></tr>`;
+        }
+        
+        // Hide pagination on error
+        const paginationContainer = document.getElementById('pagination-container');
+        if (paginationContainer) {
+            paginationContainer.style.display = 'none';
         }
     }
 }

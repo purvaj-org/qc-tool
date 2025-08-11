@@ -199,18 +199,35 @@ def upload_history():
 @api_login_required
 def get_upload_history():
     unique_userid = session['user']['unique_userid']
+    
+    # Get pagination parameters
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 10))
+    offset = (page - 1) * per_page
 
     try:
         conn = get_db_connection()
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Get total count for pagination
+            count_query = """
+                SELECT COUNT(*) as total
+                FROM pandas_upload_table
+                WHERE unique_userid = %s
+            """
+            cursor.execute(count_query, (unique_userid,))
+            total_result = cursor.fetchone()
+            total_records = total_result['total'] if total_result else 0
+            
+            # Get paginated data
             query = """
                 SELECT upload_date, batch_id, location, pandas_name, 
                        bahi_name, upload_type, image_count
                 FROM pandas_upload_table
                 WHERE unique_userid = %s
                 ORDER BY upload_date DESC
+                LIMIT %s OFFSET %s
             """
-            cursor.execute(query, (unique_userid,))
+            cursor.execute(query, (unique_userid, per_page, offset))
             uploads = cursor.fetchall()
 
             for upload in uploads:
@@ -235,7 +252,23 @@ def get_upload_history():
                 upload['rejected_count'] = rejected_result['rejected_count'] if rejected_result else 0
 
         conn.close()
-        return jsonify({"history": uploads})
+        
+        # Calculate pagination info
+        total_pages = (total_records + per_page - 1) // per_page
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return jsonify({
+            "history": uploads,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            }
+        })
 
     except pymysql.MySQLError as e:
         print(f"Get upload history error: {str(e)}")

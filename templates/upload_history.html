@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/upload-history-main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/upload-history-filters.css') }}">
 </head>
+
 <body>
     <!-- Language Toggle Button -->
     <button class="language-toggle" id="languageToggle">
@@ -22,10 +24,13 @@
 
     <button class="hamburger"><i class="fas fa-bars"></i></button>
     <div class="sidebar">
-        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" alt="Purvaj.com Logo" class="logo-img">
+        <img src="{{ url_for('static', filename='img/Purvaj.com_Logo_png.png') }}" alt="Purvaj.com Logo"
+            class="logo-img">
         <a href="/upload"><i class="fas fa-upload me-2"></i><span data-translate="upload">Upload</span></a>
-        <a href="/upload_history" class="active"><i class="fas fa-history me-2"></i><span data-translate="upload_history">Upload History</span></a>
-        <a href="/image_viewer"><i class="fas fa-images me-2"></i><span data-translate="image_viewer">Image Viewer</span></a>
+        <a href="/upload_history" class="active"><i class="fas fa-history me-2"></i><span
+                data-translate="upload_history">Upload History</span></a>
+        <a href="/image_viewer"><i class="fas fa-images me-2"></i><span data-translate="image_viewer">Image
+                Viewer</span></a>
         <a href="/logout"><i class="fas fa-sign-out-alt me-2"></i><span data-translate="logout">Logout</span></a>
     </div>
     <div class="content">
@@ -33,43 +38,48 @@
             <div class="top-bar">
                 <h2 class="fw-bold" data-translate="upload_history">Upload History</h2>
                 <button class="btn-download" onclick="downloadExcel()">
-                    <i class="fas fa-file-excel me-2"></i> <span data-translate="download_excel">Download as Excel</span>
+                    <i class="fas fa-file-excel me-2"></i> <span data-translate="download_excel">Download as
+                        Excel</span>
                 </button>
             </div>
             <p><strong data-translate="user_id">User ID:</strong> <span id="session-id">Loading...</span></p>
-            
+
             <!-- Filters Section -->
             <div class="filters-container">
                 <div class="filters-row">
                     <div class="filter-group">
-                        <label class="filter-label" for="batch-search" data-translate="batch_id_search">Batch ID Search</label>
+                        <label class="filter-label" for="batch-search" data-translate="batch_id_search">Batch ID
+                            Search</label>
                         <div class="search-container">
-                            <input type="text" id="batch-search" class="search-input" data-translate-placeholder="search_batch_id" placeholder="Search by Batch ID...">
+                            <input type="text" id="batch-search" class="search-input"
+                                data-translate-placeholder="search_batch_id" placeholder="Search by Batch ID...">
                             <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
                         </div>
                     </div>
-                    
+
                     <div class="filter-group">
-                        <label class="filter-label" for="location-filter" data-translate="location_filter">Location Filter</label>
+                        <label class="filter-label" for="location-filter" data-translate="location_filter">Location
+                            Filter</label>
                         <select id="location-filter" class="filter-select">
                             <option value="" data-translate="all_locations">All Locations</option>
                         </select>
                     </div>
-                    
+
                     <div class="filter-group">
-                        <label class="filter-label" for="panda-filter" data-translate="panda_name_filter">Panda Name Filter</label>
+                        <label class="filter-label" for="panda-filter" data-translate="panda_name_filter">Panda Name
+                            Filter</label>
                         <select id="panda-filter" class="filter-select">
                             <option value="" data-translate="all_panda_names">All Panda Names</option>
                         </select>
                     </div>
-                    
+
                     <div class="filter-actions">
                         <button id="clear-filters" class="filter-btn filter-btn-secondary">
                             <i class="fas fa-times"></i> <span data-translate="clear_filters">Clear</span>
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="filter-status">
                     <div id="filter-status" data-translate="filter_status">Loading...</div>
                     <div id="active-filters" class="active-filters"></div>
@@ -92,9 +102,25 @@
                         </tr>
                     </thead>
                     <tbody id="history-table-body">
-                        <tr><td colspan="10" class="text-center" data-translate="loading_data">Loading data...</td></tr>
+                        <tr>
+                            <td colspan="10" class="text-center" data-translate="loading_data">Loading data...</td>
+                        </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-container mt-4" id="pagination-container" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="pagination-info">
+                        <span id="pagination-info-text" data-translate="showing_records">Showing records</span>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination mb-0" id="pagination-controls">
+                            <!-- Pagination buttons will be inserted here -->
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
@@ -141,11 +167,16 @@
                 search_batch_id: "Search by Batch ID...",
                 location_filter: "Location Filter",
                 all_locations: "All Locations",
-                panda_name_filter: "Panda Name Filter", 
+                panda_name_filter: "Panda Name Filter",
                 all_panda_names: "All Panda Names",
                 clear_filters: "Clear",
                 filter_status: "Loading...",
-                no_results_with_filters: "No records match your search criteria."
+                no_results_with_filters: "No records match your search criteria.",
+                showing_records: "Showing records",
+                of: "of",
+                previous: "Previous",
+                next: "Next",
+                page: "Page"
             },
             hi: {
                 upload: "अपलोड",
@@ -180,7 +211,12 @@
                 all_panda_names: "सभी पांडा नाम",
                 clear_filters: "साफ़ करें",
                 filter_status: "लोड हो रहा है...",
-                no_results_with_filters: "आपके खोज मानदंडों से कोई रिकॉर्ड मेल नहीं खाता।"
+                no_results_with_filters: "आपके खोज मानदंडों से कोई रिकॉर्ड मेल नहीं खाता।",
+                showing_records: "रिकॉर्ड दिखाए जा रहे हैं",
+                of: "का",
+                previous: "पिछला",
+                next: "अगला",
+                page: "पृष्ठ"
             }
         };
 
@@ -276,28 +312,40 @@
             });
         });
 
-        function downloadExcel() {
-            // Use filtered data if available, otherwise use the visible table
-            if (window.uploadHistoryFilters && window.uploadHistoryFilters.filteredData.length > 0) {
-                const data = window.uploadHistoryFilters.filteredData;
-                const headers = ["Date", "Batch ID", "Location", "Panda Name", "Bahi Name", "Upload Type", "Number of Images", "Approved Count", "Rejected Count"];
-                const rows = data.map(row => [
-                    row.upload_date,
-                    row.batch_id,
-                    row.location,
-                    row.pandas_name,
-                    row.bahi_name,
-                    row.upload_type,
-                    row.image_count,
-                    row.approved_count,
-                    row.rejected_count
-                ]);
-                
-                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Upload_History");
-                XLSX.writeFile(wb, "Upload_History.xlsx");
-            } else {
+        async function downloadExcel() {
+            try {
+                // Fetch all data for export (not paginated)
+                const response = await fetch('/get_upload_history?page=1&per_page=10000'); // Large number to get all records
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    const headers = ["Date", "Batch ID", "Location", "Panda Name", "Bahi Name", "Upload Type", "Number of Images", "Approved Count", "Rejected Count"];
+                    const rows = data.history.map(row => [
+                        row.upload_date,
+                        row.batch_id,
+                        row.location,
+                        row.pandas_name,
+                        row.bahi_name,
+                        row.upload_type,
+                        row.image_count,
+                        row.approved_count,
+                        row.rejected_count
+                    ]);
+
+                    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Upload_History");
+                    XLSX.writeFile(wb, "Upload_History.xlsx");
+                } else {
+                    // Fallback to table-based export
+                    let table = document.getElementById("history-table");
+                    let ws = XLSX.utils.table_to_sheet(table);
+                    let wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Upload_History");
+                    XLSX.writeFile(wb, "Upload_History.xlsx");
+                }
+            } catch (error) {
+                console.error('Error downloading Excel:', error);
                 // Fallback to table-based export
                 let table = document.getElementById("history-table");
                 let ws = XLSX.utils.table_to_sheet(table);
@@ -307,23 +355,24 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             fetch('/check_session', {
                 method: 'GET',
                 credentials: 'same-origin'
             })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.valid) {
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.valid) {
+                        window.location.href = '/login';
+                    }
+                })
+                .catch(error => {
+                    console.error('Session check failed:', error);
                     window.location.href = '/login';
-                }
-            })
-            .catch(error => {
-                console.error('Session check failed:', error);
-                window.location.href = '/login';
-            });
+                });
         });
     </script>
     <script src="{{ url_for('static', filename='js/upload-history-filters.js') }}"></script>
 </body>
+
 </html>

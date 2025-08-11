@@ -242,3 +242,63 @@ th {
         gap: 10px;
     }
 } 
+/* P
+agination Styles */
+.pagination-container {
+    margin-top: 20px;
+    padding: 15px 0;
+    border-top: 1px solid #dee2e6;
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.pagination .page-link {
+    color: #889E73;
+    border-color: #dee2e6;
+    padding: 8px 12px;
+}
+
+.pagination .page-link:hover {
+    color: #6d7c5a;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #889E73;
+    border-color: #889E73;
+    color: white;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+.pagination .page-item.disabled .page-link:hover {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .pagination-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .pagination-container .d-flex {
+        flex-direction: column;
+        align-items: center !important;
+        gap: 15px;
+    }
+    
+    .pagination-info {
+        text-align: center;
+    }
+}
